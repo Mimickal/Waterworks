@@ -1,4 +1,4 @@
-package com.example.examplemod;
+package mimickal.minecraft.waterworks;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.world.level.block.Block;
@@ -18,13 +18,14 @@ import org.slf4j.Logger;
 import java.util.stream.Collectors;
 
 // The value here should match an entry in the META-INF/mods.toml file
-@Mod("examplemod")
-public class ExampleMod
+@Mod(Waterworks.MOD_NAME)
+public class Waterworks
 {
-    // Directly reference a slf4j logger
+    public static final String MOD_NAME = "waterworks";
+
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public ExampleMod()
+    public Waterworks()
     {
         // Register the setup method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
@@ -47,7 +48,7 @@ public class ExampleMod
     private void enqueueIMC(final InterModEnqueueEvent event)
     {
         // Some example code to dispatch IMC to another mod
-        InterModComms.sendTo("examplemod", "helloworld", () -> { LOGGER.info("Hello world from the MDK"); return "Hello world";});
+        InterModComms.sendTo(Waterworks.MOD_NAME, "helloworld", () -> { LOGGER.info("Hello world from the MDK"); return "Hello world";});
     }
 
     private void processIMC(final InterModProcessEvent event)
