@@ -21,6 +21,7 @@ build
 eclipse
 run
 design-doc.md
+progress.md
 
 # Files from Forge MDK
 forge*changelog.txt
