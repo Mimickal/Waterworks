@@ -41,6 +41,7 @@ public class EvaData extends SavedData {
         return storage.computeIfAbsent(EvaData::new, EvaData::new, SAVE_NAME);
     }
 
+    // TODO This could get prohibitively large if a world gets big enough.
     /** A measure of water currently "evaporated" per-chunk. */
     private final Map<ChunkPos, Integer> humidity;
 

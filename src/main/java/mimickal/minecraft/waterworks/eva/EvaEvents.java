@@ -13,6 +13,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.slf4j.Logger;
@@ -24,6 +25,7 @@ import java.util.stream.StreamSupport;
 public class EvaEvents {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<ResourceKey<Level>, TickGuard> ACCUM_TICK_GUARDS = new HashMap<>();
+    private static final Map<ResourceKey<Level>, TickGuard> EVAP_TICK_GUARDS = new HashMap<>();
 
     /**
      * WorldTickEvent handler that accumulates water when it's raining.
@@ -54,21 +56,8 @@ public class EvaEvents {
             .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
             .filter(chunkBlockPos -> world.getBiome(chunkBlockPos).value().getPrecipitation() == Biome.Precipitation.RAIN)
             .filter(chunkBlockPos -> Chance.percent(getAccumulationChance(world, chunkBlockPos)))
-            .forEach(chunkBlockPos -> {
-                BlockPos waterPos = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, chunkBlockPos);
-                accumulateAtPosition(world, waterPos);
-            });
-    }
-
-    /**
-     * Accumulate water at the given position (and track it in world data).
-     *
-     * This method handles placing partial water blocks, if using a water physics mod that supports it.
-     */
-    private static void accumulateAtPosition(ServerLevel world, BlockPos pos) {
-        LOGGER.info("Raining at " + pos);
-        world.setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
-        EvaData.get(world).changeHumidity(pos, -1);
+            .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
+            .forEach(waterPos -> accumulateAtPosition(world, waterPos));
     }
 
     /**
@@ -83,7 +72,55 @@ public class EvaEvents {
      */
     @SubscribeEvent
     public static void evaporateWhenClear(TickEvent.WorldTickEvent event) {
+        if (event.side.isClient()) return;
+        if (event.phase == TickEvent.Phase.END) return;
+        if (!Config.evaporationEnabled.get()) return;
+        if (event.world.isRaining()) return;
 
+        EVAP_TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard(Config.evaporationSmoothness));
+        if (!EVAP_TICK_GUARDS.get(event.world.dimension()).ready()) return;
+
+        ServerLevel world = (ServerLevel) event.world;
+        DistanceManager distanceManager = world.getChunkSource().chunkMap.getDistanceManager();
+
+        StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
+            .filter(chunkHolder -> distanceManager.inBlockTickingRange(chunkHolder.getPos().toLong()))
+            .filter(chunkHolder -> Chance.percent(Config.evaporationIntensity.get()))
+            .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
+            .filter(chunkBlockPos -> Chance.percent(getEvaporationChance(world, chunkBlockPos)))
+            .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
+            .map(BlockPos::below)
+            .forEach(maybeWaterPos -> evaporateAtPosition(world, maybeWaterPos));
+    }
+
+    /**
+     * Accumulate water at the given position (and track it in world data).
+     *
+     * This method handles placing partial water blocks, if using a water physics mod that supports it.
+     */
+    private static void accumulateAtPosition(ServerLevel world, BlockPos pos) {
+        LOGGER.info("Accumulating at " + pos);
+        world.setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
+        EvaData.get(world).changeHumidity(pos, -1);
+    }
+
+    /**
+     * Evaporate water at the given position (and track it in world data).
+     *
+     * This method handles evaporating partial water blocks, if using a water physics mod that supports it.
+     */
+    private static void evaporateAtPosition(ServerLevel world, BlockPos pos) {
+        if (world.getFluidState(pos).getType() == Fluids.WATER) {
+            LOGGER.info("Evaporating at " + pos);
+            world.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+            EvaData.get(world).changeHumidity(pos, 1);
+        }
+
+        if (world.getFluidState(pos).getType() == Fluids.FLOWING_WATER) {
+            // TODO if we get this, try to grab the source.
+            LOGGER.info("flow at " + pos);
+            //world.getFluidState(pos).getFlow().
+        }
     }
 
     /**
@@ -117,6 +154,16 @@ public class EvaEvents {
         // TODO this is a placeholder calculation. Eventually this should be based on other things.
         // TODO If evaporation is disabled, this needs to be a whole different thing.
         //return getAverageHumidity(world, new ChunkPos(pos), 1);
+        return world.random.nextDouble(100);
+    }
+
+    /**
+     * Returns the percent chance water should evaporate in the chunk this block is located in.
+     * This value is based on the chunk's humidity (as well as surrounding chunks).
+     */
+    public static double getEvaporationChance(ServerLevel world, BlockPos pos) {
+        // TODO this is a placeholder calculation. Eventually this should be based on other things.
+        // TODO if accumulation is disabled, this should be based on something else, like biome humidity.
         return world.random.nextDouble(100);
     }
 }
