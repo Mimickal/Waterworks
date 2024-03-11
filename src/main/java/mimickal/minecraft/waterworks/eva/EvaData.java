@@ -59,7 +59,7 @@ public class EvaData extends SavedData {
             .stream()
             .map(tag -> (CompoundTag) tag)
             .collect(HashMap::new, HumidityTag::toMap, HashMap::putAll);
-        LOGGER.debug("Loaded " + this.humidity);
+        LOGGER.debug("Loaded {}", this.humidity);
     }
 
     /**
@@ -76,7 +76,7 @@ public class EvaData extends SavedData {
             .collect(ListTag::new, ListTag::add, ListTag::addAll);
 
         topLevelTag.put(TAG_NAME, humidityList);
-        LOGGER.debug("Serializing " + humidityList);
+        LOGGER.debug("Serializing {}", humidityList);
         return topLevelTag;
     }
 
@@ -101,7 +101,7 @@ public class EvaData extends SavedData {
      * @param amountChanged amount in milli-buckets.
      */
     public void changeHumidity(ChunkPos pos, Integer amountChanged) {
-        LOGGER.debug("Humidity change " + amountChanged + " at chunk " + pos);
+        LOGGER.debug("Humidity change {} at chunk {}", amountChanged, pos);
         this.humidity.putIfAbsent(pos, 0);
         this.humidity.put(pos, this.humidity.get(pos) + amountChanged);
         this.setDirty();

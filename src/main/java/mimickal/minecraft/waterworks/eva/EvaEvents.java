@@ -99,7 +99,7 @@ public class EvaEvents {
      * This method handles placing partial water blocks, if using a water physics mod that supports it.
      */
     private static void accumulateAtPosition(ServerLevel world, BlockPos pos) {
-        LOGGER.info("Accumulating at " + pos);
+        LOGGER.info("Accumulating at {}", pos);
         world.setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
         EvaData.get(world).changeHumidity(pos, -1);
     }
@@ -111,14 +111,14 @@ public class EvaEvents {
      */
     private static void evaporateAtPosition(ServerLevel world, BlockPos pos) {
         if (world.getFluidState(pos).getType() == Fluids.WATER) {
-            LOGGER.info("Evaporating at " + pos);
+            LOGGER.debug("Evaporating at {}", pos);
             world.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             EvaData.get(world).changeHumidity(pos, 1);
         }
 
         if (world.getFluidState(pos).getType() == Fluids.FLOWING_WATER) {
             // TODO if we get this, try to grab the source.
-            LOGGER.info("flow at " + pos);
+            LOGGER.debug("flow at {}", pos);
             //world.getFluidState(pos).getFlow().
         }
     }
