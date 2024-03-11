@@ -7,6 +7,7 @@ import mimickal.minecraft.util.TickGuard;
 import mimickal.minecraft.waterworks.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.*;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -15,7 +16,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.slf4j.Logger;
 
 import java.util.stream.StreamSupport;
-
 
 public class EvaEvents {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -48,11 +48,22 @@ public class EvaEvents {
             .filter(chunkHolder -> Chance.percent(Config.accumulationIntensity.get()))
             .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
             .filter(chunkBlockPos -> world.getBiome(chunkBlockPos).value().getPrecipitation() == Biome.Precipitation.RAIN)
+            .filter(chunkBlockPos -> Chance.percent(getAccumulationChance(world, chunkBlockPos)))
             .forEach(chunkBlockPos -> {
                 BlockPos waterPos = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, chunkBlockPos);
-                LOGGER.info("Raining at " + waterPos);
-                world.setBlockAndUpdate(waterPos, Blocks.WATER.defaultBlockState());
+                accumulateAtPosition(world, waterPos);
             });
+    }
+
+    /**
+     * Accumulate water at the given position (and track it in world data).
+     *
+     * This method handles placing partial water blocks, if using a water physics mod that supports it.
+     */
+    private static void accumulateAtPosition(ServerLevel world, BlockPos pos) {
+        LOGGER.info("Raining at " + pos);
+        world.setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
+        EvaData.get(world).changeHumidity(pos, -1);
     }
 
     /**
@@ -68,5 +79,39 @@ public class EvaEvents {
     @SubscribeEvent
     public static void evaporateWhenClear(TickEvent.WorldTickEvent event) {
 
+    }
+
+    /**
+     * Gets the average amount of evaporated water stored in the given chunk and chunks surrounding it.
+     * This is a weighted average based on distance from the given chunk.
+     *
+     * @param range how many adjacent chunks to search.
+     *              e.g. if this value is 1, we average the given chunk with the 8 chunks surrounding it.
+     * @return Amount in milli-buckets.
+     */
+    private static int getAverageHumidity(ServerLevel world, ChunkPos pos, int range) {
+        // Yes, we're throwing away some precision by doing integer division,
+        // but we're also dealing with milli-buckets, so whatever.
+        return (int)ChunkUtil.getSurroundingChunkPos(pos, range)
+            .stream()
+            .mapToInt(chunkPos -> {
+                Integer humidity = EvaData.get(world).getHumidity(chunkPos);
+                // Make less of a chunk's humidity available the further away it is.
+                int distance = Math.max(Math.abs(pos.x - chunkPos.x), Math.abs((pos.z - chunkPos.z)));
+                return (humidity / (distance + 1)) + ((humidity * distance) / (int)Math.pow(distance, 2));
+            })
+            .average()
+            .orElse(0);
+    }
+
+    /**
+     * Returns the percent chance rain should accumulate in the chunk this block is located in.
+     * This value is based on the chunk's humidity (as well as surrounding chunks).
+     */
+    private static double getAccumulationChance(ServerLevel world, BlockPos pos) {
+        // TODO this is a placeholder calculation. Eventually this should be based on other things.
+        // TODO If evaporation is disabled, this needs to be a whole different thing.
+        //return getAverageHumidity(world, new ChunkPos(pos), 1);
+        return world.random.nextDouble(100);
     }
 }

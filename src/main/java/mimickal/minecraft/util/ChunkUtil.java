@@ -8,6 +8,9 @@ import net.minecraft.world.level.ChunkPos;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.IntStream;
 
 public class ChunkUtil {
     /** For some silly reason {@link ChunkMap#getChunks} is protected, so this is the workaround. */
@@ -46,5 +49,24 @@ public class ChunkUtil {
         return world.getBlockRandomPos(
             chunkPos.getMinBlockX(), 0 /* Y */, chunkPos.getMinBlockZ(), 15 /* Chunk width */
         );
+    }
+
+    /**
+     * Returns a list of chunks in range of the given chunk.
+     * For example, with a range of 1, this function will return the 3x3 grid of {@link ChunkPos}
+     * surrounding the given chunk (total of 9).
+     * With a range of 2, this returns 5x5 {@link ChunkPos} (total of 25).
+     */
+    public static List<ChunkPos> getSurroundingChunkPos(ChunkPos pos, int range) {
+        int size = (int)Math.pow(range + 1, 2);
+        List <ChunkPos> surrounding = new ArrayList<>(size);
+
+        for (int x : IntStream.rangeClosed(pos.x - range, pos.x + range).toArray()) {
+            for (int z : IntStream.rangeClosed(pos.z - range, pos.z + range).toArray()) {
+                surrounding.add(new ChunkPos(x, z));
+            }
+        }
+
+        return surrounding;
     }
 }
