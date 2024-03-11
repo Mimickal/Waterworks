@@ -6,8 +6,10 @@ import mimickal.minecraft.util.ChunkUtil;
 import mimickal.minecraft.util.TickGuard;
 import mimickal.minecraft.waterworks.Config;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.*;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -15,11 +17,13 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.slf4j.Logger;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.StreamSupport;
 
 public class EvaEvents {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final TickGuard ACCUM_TICK_GUARD = new TickGuard(Config.accumulationSmoothness);
+    private static final Map<ResourceKey<Level>, TickGuard> ACCUM_TICK_GUARDS = new HashMap<>();
 
     /**
      * WorldTickEvent handler that accumulates water when it's raining.
@@ -36,9 +40,10 @@ public class EvaEvents {
         if (event.side.isClient()) return;
         if (event.phase == TickEvent.Phase.END) return;
         if (!Config.accumulationEnabled.get()) return;
-        // NOTE: this check returns false when first starting a world that is already raining.
         if (!event.world.isRaining()) return;
-        if (!ACCUM_TICK_GUARD.ready()) return;
+
+        ACCUM_TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard(Config.accumulationSmoothness));
+        if (!ACCUM_TICK_GUARDS.get(event.world.dimension()).ready()) return;
 
         ServerLevel world = (ServerLevel) event.world;
         DistanceManager distanceManager = world.getChunkSource().chunkMap.getDistanceManager();
