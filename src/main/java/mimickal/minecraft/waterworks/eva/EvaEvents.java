@@ -14,8 +14,10 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
@@ -110,17 +112,53 @@ public class EvaEvents {
      * This method handles evaporating partial water blocks, if using a water physics mod that supports it.
      */
     private static void evaporateAtPosition(ServerLevel world, BlockPos pos) {
+        BlockPos evapPos = null;
+
         if (world.getFluidState(pos).getType() == Fluids.WATER) {
-            LOGGER.debug("Evaporating at {}", pos);
-            world.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
-            EvaData.get(world).changeHumidity(pos, 1);
+            evapPos = pos;
         }
 
         if (world.getFluidState(pos).getType() == Fluids.FLOWING_WATER) {
-            // TODO if we get this, try to grab the source.
-            LOGGER.debug("flow at {}", pos);
-            //world.getFluidState(pos).getFlow().
+            evapPos = findNearestSource(world, pos, 20);
         }
+
+        if (evapPos != null) {
+            LOGGER.debug("Evaporating at {}" + (evapPos.equals(pos) ? "" : " (searched from {})"), evapPos, pos);
+            world.setBlockAndUpdate(evapPos, Blocks.AIR.defaultBlockState());
+            EvaData.get(world).changeHumidity(evapPos, 1);
+        }
+    }
+
+    /**
+     * Given a {@link BlockPos} containing flowing fluid, searches for the location of the nearest source of that fluid.
+     * This can return `null` if the starting position isn't a fluid, or we can't find a source within the step limit.
+     */
+    @Nullable
+    private static BlockPos findNearestSource(ServerLevel world, BlockPos pos, int maxSteps) {
+        int step = 0;
+        BlockPos curPos = pos;
+
+        while (step < maxSteps && !world.getFluidState(curPos).isSource()) {
+            Vec3 flow = world.getFluidState(curPos).getFlow(world, curPos);
+
+            if (Vec3.ZERO.equals(flow)) {
+                // Kind of a hail mary.
+                /* TODO this is good enough for now, but won't work in cases where the flow of two nearby source blocks
+                    has created a deadzone. If we want to handle that case, we'll instead want to also check if the
+                     adjacent block is flowing water, and if not, look around us until we find one. */
+                curPos = curPos.above();
+            } else {
+                curPos = new BlockPos(
+                    curPos.getX() + (flow.x == 0 ? 0 : (flow.x < 0 ? 1 : -1)),
+                    curPos.getY() + (flow.y == 0 ? 0 : (flow.y < 0 ? 1 : -1)),
+                    curPos.getZ() + (flow.z == 0 ? 0 : (flow.z < 0 ? 1 : -1))
+                );
+            }
+
+            step++;
+        }
+
+        return world.getFluidState(curPos).isSource() ? curPos : null;
     }
 
     /**
