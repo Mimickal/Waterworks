@@ -88,6 +88,7 @@ public class EvaEvents {
         StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
             .filter(chunkHolder -> distanceManager.inBlockTickingRange(chunkHolder.getPos().toLong()))
             .filter(chunkHolder -> Chance.percent(Config.evaporationIntensity.get()))
+            .filter(chunkHolder -> Chance.decimal(timeOfDayScale(world)))
             .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
             .filter(chunkBlockPos -> Chance.percent(getEvaporationChance(world, chunkBlockPos)))
             .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
@@ -159,6 +160,34 @@ public class EvaEvents {
         }
 
         return world.getFluidState(curPos).isSource() ? curPos : null;
+    }
+
+    /**
+     * Returns a scalar that is at its max when the sun is highest, and minimum when the sun disappears.
+     * It remains at that minimum throughout the night.
+     */
+    private static double timeOfDayScale(ServerLevel world) {
+        // One hour = 1000 "units". 0 is 6AM, 1000 is 7AM, 6000 is "noon", 18000 is "midnight" etc...
+        // These are the same units used in the "/time set X" command.
+        // This number continues counting up the next day, so 24000 is 6AM the next day.
+        // The sun first appears on the horizon at 5AM (23000). Note, DOES NOT map to "day" ("day" is 7AM, 1000).
+        // The sun is highest at 12 AM (6000), also mapped to keyword "noon".
+        // The sun disappears under the horizon at 7PM (13000), also mapped to keyword "night".
+
+        double min = 1 - Config.evaporationSunCoefficient.get();
+        long tod = world.getLevelData().getDayTime();
+        tod += 1000;  // Shift so sun appearance is 0 instead of 23000. This just makes the math easier.
+        tod %= 24000; // Always deal with the 0 - 24000 range.
+
+        // We pull this off with a piecewise function.
+        if (min < 1 && 0 <= tod && tod <= 14000) {
+            // During the day, time-of-day corresponds to the angle of the sun in the sky.
+            // Normalize time-of-day to value between 0 and PI so sine can work its magic.
+            return min + ((1 - min) * Math.sin(tod * Math.PI / 14000));
+        } else {
+            // During the night, just return the minimum.
+            return min;
+        }
     }
 
     /**

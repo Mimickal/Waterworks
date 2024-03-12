@@ -27,6 +27,7 @@ public class Config {
     public static ForgeConfigSpec.DoubleValue evaporationIntensity;
     public static ForgeConfigSpec.DoubleValue evaporationSmoothness;
     public static ForgeConfigSpec.ConfigValue<Integer> evaporationMaxHeight;
+    public static ForgeConfigSpec.DoubleValue evaporationSunCoefficient;
 
     private static void buildAccumulationConfig(ForgeConfigSpec.Builder builder) {
         builder.comment(
@@ -124,6 +125,14 @@ public class Config {
                 "A negative value here means water will only evaporate one it has reached a height above its starting height."
             )
             .define("max_height", 5);
+
+        evaporationSunCoefficient = builder
+            .comment(
+                "Controls how much influence the sun has over evaporation.",
+                "0 means the sun has no effect (i.e. evaporation is at its full strength at all hours of the day).",
+                "1 means evaporation ONLY happens while the sun is out."
+            )
+            .defineInRange("sun_coefficient", 0.7d, 0d, 1d);
 
         builder.pop();
     }
