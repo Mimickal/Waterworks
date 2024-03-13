@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
@@ -54,7 +55,7 @@ public class EvaEvents {
 
         StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
             .filter(chunkHolder -> distanceManager.inBlockTickingRange(chunkHolder.getPos().toLong()))
-            .filter(chunkHolder -> Chance.percent(Config.accumulationIntensity.get()))
+            .filter(chunkHolder -> Chance.percent(scaleWithSmoothness(Config.accumulationIntensity, Config.accumulationSmoothness)))
             .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
             .filter(chunkBlockPos -> world.getBiome(chunkBlockPos).value().getPrecipitation() == Biome.Precipitation.RAIN)
             .filter(chunkBlockPos -> Chance.percent(getAccumulationChance(world, chunkBlockPos)))
@@ -87,13 +88,29 @@ public class EvaEvents {
 
         StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
             .filter(chunkHolder -> distanceManager.inBlockTickingRange(chunkHolder.getPos().toLong()))
-            .filter(chunkHolder -> Chance.percent(Config.evaporationIntensity.get()))
+            .filter(chunkHolder -> Chance.percent(scaleWithSmoothness(Config.evaporationIntensity, Config.evaporationSmoothness)))
             .filter(chunkHolder -> Chance.decimal(timeOfDayScale(world)))
             .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
             .filter(chunkBlockPos -> Chance.percent(getEvaporationChance(world, chunkBlockPos)))
             .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
             .map(BlockPos::below)
             .forEach(maybeWaterPos -> evaporateAtPosition(world, maybeWaterPos));
+    }
+
+    /**
+     * Scales the chance of a single event to be inversely proportional with its smoothness.
+     *
+     * Intensity is used to determine the chance that a single event happens.
+     * Smoothness is used to determine how often we "roll" on that chance.
+     * Scaling chance against smoothness means the same number of events should occur over time regardless of smoothness
+     * (i.e. number of events over time is determines solely by intensity).
+     */
+    private static double scaleWithSmoothness(ForgeConfigSpec.DoubleValue intensity, ForgeConfigSpec.DoubleValue smoothness) {
+        if (smoothness.get() < 1) {
+            return intensity.get();
+        }
+
+        return intensity.get() / smoothness.get();
     }
 
     /**
