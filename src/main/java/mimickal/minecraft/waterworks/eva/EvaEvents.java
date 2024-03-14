@@ -119,7 +119,7 @@ public class EvaEvents {
      * This method handles placing partial water blocks, if using a water physics mod that supports it.
      */
     private static void accumulateAtPosition(ServerLevel world, BlockPos pos) {
-        LOGGER.info("Accumulating at {}", pos);
+        LOGGER.debug("Accumulating at {}", pos);
         world.setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
         EvaData.get(world).changeHumidity(pos, -1);
     }
@@ -232,22 +232,18 @@ public class EvaEvents {
 
     /**
      * Returns the percent chance rain should accumulate in the chunk this block is located in.
-     * This value is based on the chunk's humidity (as well as surrounding chunks).
+     * This is determined by the "downfall" value of the biome the block resides in.
      */
     private static double getAccumulationChance(ServerLevel world, BlockPos pos) {
-        // TODO this is a placeholder calculation. Eventually this should be based on other things.
-        // TODO If evaporation is disabled, this needs to be a whole different thing.
-        //return getAverageHumidity(world, new ChunkPos(pos), 1);
-        return world.random.nextDouble(100);
+        return world.getBiome(pos).value().getDownfall();
     }
 
     /**
      * Returns the percent chance water should evaporate in the chunk this block is located in.
-     * This value is based on the chunk's humidity (as well as surrounding chunks).
+     * This is determined by the inverse of the "downfall" value of the buome the block resides in.
      */
     public static double getEvaporationChance(ServerLevel world, BlockPos pos) {
-        // TODO this is a placeholder calculation. Eventually this should be based on other things.
-        // TODO if accumulation is disabled, this should be based on something else, like biome humidity.
-        return world.random.nextDouble(100);
+        return 1 - world.getBiome(pos).value().getDownfall();
+    }
     }
 }
