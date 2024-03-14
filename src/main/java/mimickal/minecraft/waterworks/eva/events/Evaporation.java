@@ -1,21 +1,20 @@
-package mimickal.minecraft.waterworks.eva;
+package mimickal.minecraft.waterworks.eva.events;
 
 import com.mojang.logging.LogUtils;
 import mimickal.minecraft.util.Chance;
 import mimickal.minecraft.util.ChunkUtil;
 import mimickal.minecraft.util.TickGuard;
 import mimickal.minecraft.waterworks.Config;
+import mimickal.minecraft.waterworks.eva.EvaData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.*;
-import net.minecraft.world.level.ChunkPos;
+import net.minecraft.server.level.DistanceManager;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
@@ -25,43 +24,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.StreamSupport;
 
-public class EvaEvents {
+public class Evaporation {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Map<ResourceKey<Level>, TickGuard> ACCUM_TICK_GUARDS = new HashMap<>();
-    private static final Map<ResourceKey<Level>, TickGuard> EVAP_TICK_GUARDS = new HashMap<>();
-
-    /**
-     * WorldTickEvent handler that accumulates water when it's raining.
-     *
-     * Rain only accumulates when:
-     * - It's raining
-     * - The block is in a biome where it rains (e.g. not a desert).
-     * - The block is visible to the sky.
-     * - Rain can accumulate in the biome
-     * - the selected block is not on the accumulation blacklist.
-     */
-    @SubscribeEvent
-    public static void accumulateWhenRaining(TickEvent.WorldTickEvent event) {
-        if (event.side.isClient()) return;
-        if (event.phase == TickEvent.Phase.END) return;
-        if (!Config.accumulationEnabled.get()) return;
-        if (!event.world.isRaining()) return;
-
-        ACCUM_TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard(Config.accumulationSmoothness));
-        if (!ACCUM_TICK_GUARDS.get(event.world.dimension()).ready()) return;
-
-        ServerLevel world = (ServerLevel) event.world;
-        DistanceManager distanceManager = world.getChunkSource().chunkMap.getDistanceManager();
-
-        StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
-            .filter(chunkHolder -> distanceManager.inBlockTickingRange(chunkHolder.getPos().toLong()))
-            .filter(chunkHolder -> Chance.percent(scaleWithSmoothness(Config.accumulationIntensity, Config.accumulationSmoothness)))
-            .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
-            .filter(chunkBlockPos -> world.getBiome(chunkBlockPos).value().getPrecipitation() == Biome.Precipitation.RAIN)
-            .filter(chunkBlockPos -> Chance.percent(getAccumulationChance(world, chunkBlockPos)))
-            .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
-            .forEach(waterPos -> accumulateAtPosition(world, waterPos));
-    }
+    private static final Map<ResourceKey<Level>, TickGuard> TICK_GUARDS = new HashMap<>();
 
     /**
      * WorldTickEvent handler that evaporates water when it's clear.
@@ -80,48 +45,23 @@ public class EvaEvents {
         if (!Config.evaporationEnabled.get()) return;
         if (event.world.isRaining()) return;
 
-        EVAP_TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard(Config.evaporationSmoothness));
-        if (!EVAP_TICK_GUARDS.get(event.world.dimension()).ready()) return;
+        TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard(Config.evaporationSmoothness));
+        if (!TICK_GUARDS.get(event.world.dimension()).ready()) return;
 
         ServerLevel world = (ServerLevel) event.world;
         DistanceManager distanceManager = world.getChunkSource().chunkMap.getDistanceManager();
 
         StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
             .filter(chunkHolder -> distanceManager.inBlockTickingRange(chunkHolder.getPos().toLong()))
-            .filter(chunkHolder -> Chance.percent(scaleWithSmoothness(Config.evaporationIntensity, Config.evaporationSmoothness)))
+            .filter(chunkHolder -> Chance.percent(Chance.scaleWithSmoothness(
+                Config.evaporationIntensity.get(), Config.evaporationSmoothness.get()
+            )))
             .filter(chunkHolder -> Chance.decimal(timeOfDayScale(world)))
             .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
             .filter(chunkBlockPos -> Chance.percent(getEvaporationChance(world, chunkBlockPos)))
             .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
             .map(BlockPos::below)
             .forEach(maybeWaterPos -> evaporateAtPosition(world, maybeWaterPos));
-    }
-
-    /**
-     * Scales the chance of a single event to be inversely proportional with its smoothness.
-     *
-     * Intensity is used to determine the chance that a single event happens.
-     * Smoothness is used to determine how often we "roll" on that chance.
-     * Scaling chance against smoothness means the same number of events should occur over time regardless of smoothness
-     * (i.e. number of events over time is determines solely by intensity).
-     */
-    private static double scaleWithSmoothness(ForgeConfigSpec.DoubleValue intensity, ForgeConfigSpec.DoubleValue smoothness) {
-        if (smoothness.get() < 1) {
-            return intensity.get();
-        }
-
-        return intensity.get() / smoothness.get();
-    }
-
-    /**
-     * Accumulate water at the given position (and track it in world data).
-     *
-     * This method handles placing partial water blocks, if using a water physics mod that supports it.
-     */
-    private static void accumulateAtPosition(ServerLevel world, BlockPos pos) {
-        LOGGER.debug("Accumulating at {}", pos);
-        world.setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
-        EvaData.get(world).changeHumidity(pos, -1);
     }
 
     /**
@@ -208,42 +148,10 @@ public class EvaEvents {
     }
 
     /**
-     * Gets the average amount of evaporated water stored in the given chunk and chunks surrounding it.
-     * This is a weighted average based on distance from the given chunk.
-     *
-     * @param range how many adjacent chunks to search.
-     *              e.g. if this value is 1, we average the given chunk with the 8 chunks surrounding it.
-     * @return Amount in milli-buckets.
-     */
-    private static int getAverageHumidity(ServerLevel world, ChunkPos pos, int range) {
-        // Yes, we're throwing away some precision by doing integer division,
-        // but we're also dealing with milli-buckets, so whatever.
-        return (int)ChunkUtil.getSurroundingChunkPos(pos, range)
-            .stream()
-            .mapToInt(chunkPos -> {
-                Integer humidity = EvaData.get(world).getHumidity(chunkPos);
-                // Make less of a chunk's humidity available the further away it is.
-                int distance = Math.max(Math.abs(pos.x - chunkPos.x), Math.abs((pos.z - chunkPos.z)));
-                return (humidity / (distance + 1)) + ((humidity * distance) / (int)Math.pow(distance, 2));
-            })
-            .average()
-            .orElse(0);
-    }
-
-    /**
-     * Returns the percent chance rain should accumulate in the chunk this block is located in.
-     * This is determined by the "downfall" value of the biome the block resides in.
-     */
-    private static double getAccumulationChance(ServerLevel world, BlockPos pos) {
-        return world.getBiome(pos).value().getDownfall();
-    }
-
-    /**
      * Returns the percent chance water should evaporate in the chunk this block is located in.
      * This is determined by the inverse of the "downfall" value of the buome the block resides in.
      */
     public static double getEvaporationChance(ServerLevel world, BlockPos pos) {
         return 1 - world.getBiome(pos).value().getDownfall();
-    }
     }
 }

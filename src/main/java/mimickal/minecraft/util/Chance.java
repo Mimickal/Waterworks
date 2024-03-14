@@ -14,4 +14,20 @@ public class Chance {
     public static boolean decimal(double dec) {
         return random.nextDouble() < dec;
     }
+
+    /**
+     * Scales the chance of a single event to be inversely proportional with its smoothness.
+     *
+     * Intensity is used to determine the chance that a single event happens.
+     * Smoothness is used to determine how often we "roll" on that chance.
+     * Scaling chance against smoothness means the same number of events should occur over time regardless of smoothness
+     * (i.e. number of events over time is determines solely by intensity).
+     */
+    public static double scaleWithSmoothness(double intensity, double smoothness) {
+        if (smoothness < 1) {
+            return intensity;
+        }
+
+        return intensity / smoothness;
+    }
 }

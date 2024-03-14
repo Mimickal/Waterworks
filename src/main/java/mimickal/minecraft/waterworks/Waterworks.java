@@ -1,7 +1,8 @@
 package mimickal.minecraft.waterworks;
 
 import com.mojang.logging.LogUtils;
-import mimickal.minecraft.waterworks.eva.EvaEvents;
+import mimickal.minecraft.waterworks.eva.events.Accumulation;
+import mimickal.minecraft.waterworks.eva.events.Evaporation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.common.MinecraftForge;
@@ -42,7 +43,8 @@ public class Waterworks
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
-        MinecraftForge.EVENT_BUS.register(EvaEvents.class);
+        MinecraftForge.EVENT_BUS.register(Accumulation.class);
+        MinecraftForge.EVENT_BUS.register(Evaporation.class);
     }
 
     private void setup(final FMLCommonSetupEvent event)
