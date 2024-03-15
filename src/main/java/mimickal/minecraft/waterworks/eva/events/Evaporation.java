@@ -26,7 +26,7 @@ import java.util.stream.StreamSupport;
 
 public class Evaporation {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Map<ResourceKey<Level>, TickGuard> TICK_GUARDS = new HashMap<>();
+    private static final Map<ResourceKey<Level>, TickGuard.Config> TICK_GUARDS = new HashMap<>();
 
     /**
      * WorldTickEvent handler that evaporates water when it's clear.
@@ -45,7 +45,7 @@ public class Evaporation {
         if (!Config.evaporationEnabled.get()) return;
         if (event.world.isRaining()) return;
 
-        TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard(Config.evaporationSmoothness));
+        TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard.Config(Config.evaporationSmoothness));
         if (!TICK_GUARDS.get(event.world.dimension()).ready()) return;
 
         ServerLevel world = (ServerLevel) event.world;

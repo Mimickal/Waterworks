@@ -3,6 +3,7 @@ package mimickal.minecraft.waterworks;
 import com.mojang.logging.LogUtils;
 import mimickal.minecraft.waterworks.eva.events.Accumulation;
 import mimickal.minecraft.waterworks.eva.events.Evaporation;
+import mimickal.minecraft.waterworks.eva.events.Rain;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.common.MinecraftForge;
@@ -45,6 +46,7 @@ public class Waterworks
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(Accumulation.class);
         MinecraftForge.EVENT_BUS.register(Evaporation.class);
+        MinecraftForge.EVENT_BUS.register(Rain.class);
     }
 
     private void setup(final FMLCommonSetupEvent event)

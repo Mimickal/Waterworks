@@ -24,7 +24,7 @@ import java.util.stream.StreamSupport;
 
 public class Accumulation {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Map<ResourceKey<Level>, TickGuard> TICK_GUARDS = new HashMap<>();
+    private static final Map<ResourceKey<Level>, TickGuard.Config> TICK_GUARDS = new HashMap<>();
 
     /**
      * WorldTickEvent handler that accumulates water when it's raining.
@@ -43,7 +43,7 @@ public class Accumulation {
         if (!Config.accumulationEnabled.get()) return;
         if (!event.world.isRaining()) return;
 
-        TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard(Config.accumulationSmoothness));
+        TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard.Config(Config.accumulationSmoothness));
         if (!TICK_GUARDS.get(event.world.dimension()).ready()) return;
 
         ServerLevel world = (ServerLevel) event.world;
