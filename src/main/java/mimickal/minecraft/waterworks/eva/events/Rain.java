@@ -19,6 +19,7 @@ public class Rain {
     private static final int RAIN_DELAY_MIN = 12000;  // 10 minutes
     private static final int RAIN_DELAY_MAX = 180000; // 150 minutes
 
+    /** {@link TickEvent.WorldTickEvent} that determines when rainstorms start and controls how long they last. */
     @SubscribeEvent
     public static void accumulateWhenRaining(TickEvent.WorldTickEvent event) {
         if (event.side.isClient()) return;

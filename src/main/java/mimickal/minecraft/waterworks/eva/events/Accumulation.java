@@ -27,14 +27,14 @@ public class Accumulation {
     private static final Map<ResourceKey<Level>, TickGuard.Config> TICK_GUARDS = new HashMap<>();
 
     /**
-     * WorldTickEvent handler that accumulates water when it's raining.
-     *
+     * {@link TickEvent.WorldTickEvent} handler that accumulates water when it's raining.
+     * <p>
      * Rain only accumulates when:
-     * - It's raining
-     * - The block is in a biome where it rains (e.g. not a desert).
-     * - The block is visible to the sky.
-     * - Rain can accumulate in the biome
-     * - the selected block is not on the accumulation blacklist.
+     * <li>It's raining.</li>
+     * <li>The block is in a biome where it rains (e.g. not a desert).</li>
+     * <li>The block is visible to the sky.</li>
+     * <li>Rain can accumulate in the biome.</li>
+     * <li>the selected block is not on the accumulation blacklist.</li>
      */
     @SubscribeEvent
     public static void accumulateWhenRaining(TickEvent.WorldTickEvent event) {
@@ -63,7 +63,7 @@ public class Accumulation {
 
     /**
      * Accumulate water at the given position (and track it in world data).
-     *
+     * <p>
      * This method handles placing partial water blocks, if using a water physics mod that supports it.
      */
     private static void accumulateAtPosition(ServerLevel world, BlockPos pos) {

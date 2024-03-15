@@ -29,14 +29,14 @@ public class Evaporation {
     private static final Map<ResourceKey<Level>, TickGuard.Config> TICK_GUARDS = new HashMap<>();
 
     /**
-     * WorldTickEvent handler that evaporates water when it's clear.
+     * {@link TickEvent.WorldTickEvent} handler that evaporates water when it's clear.
      * Evaporation intensity scales with sun intensity.
      * In other words, the closer to noon it is, the faster water evaporates.
      * The minimum time-of-day scaling is applied throughout the night.
-     *
+     * <p>
      * Water only evaporates when:
-     * - It's not raining.
-     * - The water is visible to the sky.
+     * <li>It's not raining.</li>
+     * <li>The water is visible to the sky.</li>
      */
     @SubscribeEvent
     public static void evaporateWhenClear(TickEvent.WorldTickEvent event) {
@@ -66,7 +66,7 @@ public class Evaporation {
 
     /**
      * Evaporate water at the given position (and track it in world data).
-     *
+     * <p>
      * This method handles evaporating partial water blocks, if using a water physics mod that supports it.
      */
     private static void evaporateAtPosition(ServerLevel world, BlockPos pos) {

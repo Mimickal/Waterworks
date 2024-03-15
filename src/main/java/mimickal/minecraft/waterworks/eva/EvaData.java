@@ -23,7 +23,7 @@ public class EvaData extends SavedData {
 
     /**
      * Gets the data manager for the given level, creating it if it doesn't exist yet.
-     *
+     * <p>
      * This method adds a data manager to the level if it doesn't have one yet.
      * The created instance is registered with the level's storage. When the game is saved,
      * the level calls {@link EvaData#save(CompoundTag)}.
