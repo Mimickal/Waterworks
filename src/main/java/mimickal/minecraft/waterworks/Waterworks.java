@@ -1,12 +1,14 @@
 package mimickal.minecraft.waterworks;
 
 import com.mojang.logging.LogUtils;
+import mimickal.minecraft.waterworks.eva.commands.HumidityCommand;
 import mimickal.minecraft.waterworks.eva.events.Accumulation;
 import mimickal.minecraft.waterworks.eva.events.Evaporation;
 import mimickal.minecraft.waterworks.eva.events.Rain;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.InterModComms;
@@ -44,9 +46,14 @@ public class Waterworks
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
+
+        // Tick events
         MinecraftForge.EVENT_BUS.register(Accumulation.class);
         MinecraftForge.EVENT_BUS.register(Evaporation.class);
         MinecraftForge.EVENT_BUS.register(Rain.class);
+
+        // Commands
+        MinecraftForge.EVENT_BUS.register(HumidityCommand.class);
     }
 
     private void setup(final FMLCommonSetupEvent event)
