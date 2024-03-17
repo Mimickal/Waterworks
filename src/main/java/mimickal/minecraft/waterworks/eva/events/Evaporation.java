@@ -7,6 +7,7 @@ import mimickal.minecraft.util.TickGuard;
 import mimickal.minecraft.waterworks.Config;
 import mimickal.minecraft.waterworks.eva.EvaData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.DistanceManager;
 import net.minecraft.server.level.ServerLevel;
@@ -20,7 +21,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.StreamSupport;
 
@@ -77,7 +80,7 @@ public class Evaporation {
         }
 
         if (world.getFluidState(pos).getType() == Fluids.FLOWING_WATER) {
-            evapPos = findNearestSource(world, pos, 20);
+            evapPos = findNearestSource(world, pos);
         }
 
         if (evapPos != null) {
@@ -89,23 +92,47 @@ public class Evaporation {
 
     /**
      * Given a {@link BlockPos} containing flowing fluid, searches for the location of the nearest source of that fluid.
+     * <p>
      * This can return `null` if the starting position isn't a fluid, or we can't find a source within the step limit.
      */
     @Nullable
-    private static BlockPos findNearestSource(ServerLevel world, BlockPos pos, int maxSteps) {
+    private static BlockPos findNearestSource(ServerLevel world, BlockPos pos) {
+        // Starting block wasn't water. This is going nowhere fast, so bail out early.
+        if (world.getFluidState(pos).isEmpty()) {
+            return null;
+        }
+
+        int maxSteps = Config.evaporationTenacity.get();
         int step = 0;
         BlockPos curPos = pos;
+        BlockPos lastKnownGoodPos = pos;
 
+        // This algorithm assumes that water always flows away from its source.
+        // We follow the flow "backwards" until we find a source.
+        // We also maintain one position of history so that if we make a wrong move, we can go back and try again.
         while (step < maxSteps && !world.getFluidState(curPos).isSource()) {
             Vec3 flow = world.getFluidState(curPos).getFlow(world, curPos);
 
             if (Vec3.ZERO.equals(flow)) {
-                // Kind of a hail mary.
-                /* TODO this is good enough for now, but won't work in cases where the flow of two nearby source blocks
-                    has created a deadzone. If we want to handle that case, we'll instead want to also check if the
-                     adjacent block is flowing water, and if not, look around us until we find one. */
-                curPos = curPos.above();
+                // TODO this is better than it was before, but still frequently hits the max step count.
+
+                // We either have water that isn't moving, or a block that isn't water.
+                if (world.getFluidState(curPos).getAmount() > 0) {
+                    // We're in still, non-source water. There should be something useful adjacent to us.
+                    if (DirHelper.hasNext()) {
+                        curPos = curPos.relative(DirHelper.next());
+                    } else {
+                        LOGGER.debug("Lost the water at {} while searching", curPos);
+                        break;
+                    }
+                } else {
+                    // We're not in water at all
+                    curPos = lastKnownGoodPos;
+                }
             } else {
+                // Continue searching in the opposite direction of the flow.
+                DirHelper.reset();
+                lastKnownGoodPos = curPos;
                 curPos = new BlockPos(
                     curPos.getX() + (flow.x == 0 ? 0 : (flow.x < 0 ? 1 : -1)),
                     curPos.getY() + (flow.y == 0 ? 0 : (flow.y < 0 ? 1 : -1)),
@@ -115,6 +142,8 @@ public class Evaporation {
 
             step++;
         }
+
+        LOGGER.debug("Searched for {} in {} steps", curPos, step);
 
         return world.getFluidState(curPos).isSource() ? curPos : null;
     }
@@ -155,7 +184,39 @@ public class Evaporation {
      * (e.g. deserts have a low `downfall` value).
      * We factor this into the evaporation chance calculation so dryer biomes evaporate more frequently.
      */
-    public static double getEvaporationChance(ServerLevel world, BlockPos pos) {
+    private static double getEvaporationChance(ServerLevel world, BlockPos pos) {
         return 1 - world.getBiome(pos).value().getDownfall();
+    }
+
+    /** Helps us find the next direction to search when following water flow doesn't work. */
+    private static class DirHelper {
+        private static final List<Direction> directions = Arrays.asList(
+            Direction.UP,
+            Direction.NORTH,
+            Direction.EAST,
+            Direction.SOUTH,
+            Direction.WEST
+        );
+
+        private static int curIndex;
+
+        private static void reset() {
+            curIndex = 0;
+        }
+
+        private static boolean hasNext() {
+            return curIndex < directions.size();
+        }
+
+        @Nullable
+        private static Direction next() {
+            if (!hasNext()) {
+                return null;
+            }
+
+            Direction nextDir = directions.get(curIndex);
+            curIndex++;
+            return nextDir;
+        }
     }
 }
