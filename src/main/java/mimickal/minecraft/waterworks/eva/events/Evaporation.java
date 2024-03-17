@@ -149,7 +149,11 @@ public class Evaporation {
 
     /**
      * Returns the percent chance water should evaporate in the chunk this block is located in.
-     * This is determined by the inverse of the "downfall" value of the buome the block resides in.
+     * <p>
+     * Vanilla biomes types have a `downfall` value that the game uses to determine its rain intensity relative to
+     * other biome types. This value seems to loosely correlate with how "dry" a biome should be
+     * (e.g. deserts have a low `downfall` value).
+     * We factor this into the evaporation chance calculation so dryer biomes evaporate more frequently.
      */
     public static double getEvaporationChance(ServerLevel world, BlockPos pos) {
         return 1 - world.getBiome(pos).value().getDownfall();

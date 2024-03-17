@@ -17,7 +17,7 @@ public class Chance {
 
     /**
      * Scales the chance of a single event to be inversely proportional with its smoothness.
-     *
+     * <p>
      * Intensity is used to determine the chance that a single event happens.
      * Smoothness is used to determine how often we "roll" on that chance.
      * Scaling chance against smoothness means the same number of events should occur over time regardless of smoothness

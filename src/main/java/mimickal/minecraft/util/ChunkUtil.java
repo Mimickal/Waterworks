@@ -16,9 +16,9 @@ public class ChunkUtil {
     /** For some silly reason {@link ChunkMap#getChunks} is protected, so this is the workaround. */
     public static Iterable<ChunkHolder> getLoadedChunks(ServerLevel world) {
         // Ironically, Reflection is probably the most portable way to do this.
+        ChunkMap chunkMap = world.getChunkSource().chunkMap;
         try {
-            ChunkMap chunkMap = world.getChunkSource().chunkMap;
-            Method getChunks = chunkMap.getClass().getDeclaredMethod("getChunks");
+            Method getChunks = ChunkMap.class.getDeclaredMethod("getChunks");
             getChunks.setAccessible(true);
 
             // AFAIK there's no way to do this cast that Java thinks is safe.
@@ -38,7 +38,7 @@ public class ChunkUtil {
 
     /**
      * Returns a random block in the given chunk.
-     *
+     * <p>
      * A chunk can span multiple biomes if it's right on the edge.
      * Picking a random spot every time means that the rate of biome-specific calculations
      * will be roughly equal to the percentage of this chunk contained within that biome.
