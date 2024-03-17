@@ -14,10 +14,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import org.apache.commons.lang3.function.TriFunction;
 import org.slf4j.Logger;
 
 import java.util.Arrays;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /** Command for getting and setting a chunk's humidity. */
@@ -78,30 +78,25 @@ public class HumidityCommand {
      * For example: {@code humidity get [x] [z]}
      */
     private static RequiredArgumentBuilder<CommandSourceStack, Integer> addOptionalCoordinateArgs(
-        TriFunction<CommandContext<CommandSourceStack>, Integer, Integer, Integer> executor
+        BiFunction<CommandContext<CommandSourceStack>, ChunkPos, Integer> executor
     ) {
         return Commands.argument(ARG_X, IntegerArgumentType.integer())
             .then(Commands.argument(ARG_Z, IntegerArgumentType.integer())
                 .executes(context -> {
                     int x = IntegerArgumentType.getInteger(context, ARG_X);
                     int z = IntegerArgumentType.getInteger(context, ARG_Z);
-                    return executor.apply(context, x, z);
+                    return executor.apply(context, new ChunkPos(x, z));
                 })
             );
     }
 
     /** Prints the humidity at the chunk of the player who invoked this command. */
     private static int getHumidityCurrentChunk(CommandContext<CommandSourceStack> context) {
-        return printHumidityCommon(context, getPlayerChunk(context));
+        return getHumidityAtPos(context, getPlayerChunk(context));
     }
 
-    /** Prints the humidity at the chunk given in the coordinates. */
-    private static int getHumidityAtPos(CommandContext<CommandSourceStack> context, int x, int z) {
-        return printHumidityCommon(context, new ChunkPos(x, z));
-    }
-
-    /** Common logic for printing humidity at a chunk. */
-    private static int printHumidityCommon(CommandContext<CommandSourceStack> context, ChunkPos pos) {
+    /** Prints the humidity at the given chunk. */
+    private static int getHumidityAtPos(CommandContext<CommandSourceStack> context, ChunkPos pos) {
         ServerLevel world = context.getSource().getLevel();
         int humidity = EvaData.get(world).getHumidity(pos);
         sendMsg(context, "Humidity at", pos, ":", humidity, "mB");
@@ -110,16 +105,11 @@ public class HumidityCommand {
 
     /** Sets the humidity at the chunk of the player who invoked this command. */
     private static int setHumidityCurrentChunk(CommandContext<CommandSourceStack> context) {
-        return setHumidityCommon(context, getPlayerChunk(context));
+        return setHumidityAtPos(context, getPlayerChunk(context));
     }
 
-    /** Sets the humidity at the chunk given in the coordinates. */
-    private static int setHumidityAtPos(CommandContext<CommandSourceStack> context, int x, int z) {
-        return setHumidityCommon(context, new ChunkPos(x, z));
-    }
-
-    /** Common logic for changing humidity at a chunk. */
-    private static int setHumidityCommon(CommandContext<CommandSourceStack> context, ChunkPos pos) {
+    /** Sets the humidity at the given chunk. */
+    private static int setHumidityAtPos(CommandContext<CommandSourceStack> context, ChunkPos pos) {
         ServerLevel world = context.getSource().getLevel();
         int newAmount = IntegerArgumentType.getInteger(context, ARG_AMT);
         int oldAmount = EvaData.get(world).getHumidity(pos);
@@ -131,16 +121,11 @@ public class HumidityCommand {
 
     /** Resets the humidity to default at the chunk of the player who invoked this command. */
     private static int resetHumidityCurrentChunk(CommandContext<CommandSourceStack> context) {
-        return resetHumidityCommon(context, getPlayerChunk(context));
+        return resetHumidityAtPos(context, getPlayerChunk(context));
     }
 
-    /** Resets the humidity to default at the chunk given in the coordinates. */
-    private static int resetHumidityAtPos(CommandContext<CommandSourceStack> context, int x, int z) {
-        return resetHumidityCommon(context, new ChunkPos(x, z));
-    }
-
-    /** Common logic for resetting humidity at a chunk. */
-    private static int resetHumidityCommon(CommandContext<CommandSourceStack> context, ChunkPos pos) {
+    /** Resets the humidity to default at the given chunk. */
+    private static int resetHumidityAtPos(CommandContext<CommandSourceStack> context, ChunkPos pos) {
         ServerLevel world = context.getSource().getLevel();
         EvaData.get(world).resetHumidity(pos);
         int newAmount = EvaData.get(world).getHumidity(pos);
