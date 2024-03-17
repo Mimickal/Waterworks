@@ -83,7 +83,7 @@ public class Evaporation {
         if (evapPos != null) {
             LOGGER.debug("Evaporating at {}" + (evapPos.equals(pos) ? "" : " (searched from {})"), evapPos, pos);
             world.setBlockAndUpdate(evapPos, Blocks.AIR.defaultBlockState());
-            EvaData.get(world).changeHumidity(evapPos, 1);
+            EvaData.get(world).changeHumidity(evapPos, 1000);
         }
     }
 

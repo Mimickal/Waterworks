@@ -69,7 +69,7 @@ public class Accumulation {
     private static void accumulateAtPosition(ServerLevel world, BlockPos pos) {
         LOGGER.debug("Accumulating at {}", pos);
         world.setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
-        EvaData.get(world).changeHumidity(pos, -1);
+        EvaData.get(world).changeHumidity(pos, -1000);
     }
 
     /**

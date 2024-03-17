@@ -4,7 +4,9 @@ import com.mojang.logging.LogUtils;
 import mimickal.minecraft.util.Chance;
 import mimickal.minecraft.util.ChunkUtil;
 import mimickal.minecraft.util.TickGuard;
+import mimickal.minecraft.waterworks.Config;
 import mimickal.minecraft.waterworks.eva.EvaData;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -23,13 +25,6 @@ public class Rain {
     private static final int RAIN_DELAY_MIN = 10 * 20; // 10 seconds
     private static final int RAIN_DELAY_MAX = 30 * 20; // 30 seconds
 
-    // TODO what is wrong with me? Just expose this as a configurable value with a sane default.
-    /**
-     * There's not a good concrete value for the "max humidity" of a chunk, so we just make one up.
-     * This allows us to express a chunk's humidity as a percentage.
-     */
-    private static final double MAX_HUMIDITY = 16 * 16; // Surface area of a chunk
-
     /**
      * This is the {@code a} in a best-fit regression for {@code y = x ^ a} using the following data points:<br>
      * {@code [x, y]: [0.0, 0.0], [0.5, 0.1], [0.75, 0.275], [1.0, 1.0]}
@@ -45,9 +40,12 @@ public class Rain {
     /**
      * {@link TickEvent.WorldTickEvent} that determines when rainstorms start and controls how long they last.
      * <p>
+     * NOTE: both accumulation and evaporation need to be enabled for this event to take effect.<br>
+     * If evaporation was disabled, rain would never start. If accumulation was disabled, rain would never stop.
+     * <p>
      * Rain probability is based on the average relative humidity of all loaded chunks.
-     * "Humidity" is the amount of water evaporated in a chunk. We ultimately express this as a percentage of a chunk's
-     * max humidity (See {@link #MAX_HUMIDITY}).
+     * "Humidity" is the amount of water evaporated in a chunk. We ultimately express this as a fraction of a chunk's
+     * max humidity (See {@link Config#rainChunkHumidityThreshold}).
      * The higher the relative humidity, the more likely rain is, and vice versa.
      * <p>
      * This does not disable or change any other vanilla rain mechanics.
@@ -57,6 +55,9 @@ public class Rain {
     public static void controlRain(TickEvent.WorldTickEvent event) {
         if (event.side.isClient()) return;
         if (event.phase == TickEvent.Phase.END) return;
+        if (!Config.accumulationEnabled.get()) return;
+        if (!Config.evaporationEnabled.get()) return;
+        if (!Config.rainModEnabled.get()) return;
         if (!event.world.dimensionType().hasSkyLight()) return;
 
         TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard.Random(RAIN_DELAY_MIN, RAIN_DELAY_MAX));
@@ -66,7 +67,7 @@ public class Rain {
 
         double avgHumidity = StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
             .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
-            .mapToDouble(chunkBlockPos -> EvaData.get(world).getHumidity(chunkBlockPos) / MAX_HUMIDITY)
+            .mapToDouble(chunkBlockPos -> calcChunkHumidity(world, chunkBlockPos))
             .average()
             .orElse(0);
 
@@ -82,6 +83,17 @@ public class Rain {
                 startRaining(world);
             }
         }
+    }
+
+    /**
+     * Calculates the humidity of the given chunk as a fraction of the configured "max humidity" threshold
+     * (See {@link Config#rainChunkHumidityThreshold}).
+     * <p>
+     * Both of these values are measured in milli-buckets, so simple division gives us the desired value.
+     * This resulting value can be above 1.0.
+     */
+    private static double calcChunkHumidity(ServerLevel world, BlockPos blockPos) {
+        return (double) EvaData.get(world).getHumidity(blockPos) / Config.rainChunkHumidityThreshold.get();
     }
 
     /**

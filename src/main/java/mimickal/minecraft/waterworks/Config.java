@@ -14,6 +14,7 @@ public class Config {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         buildAccumulationConfig(builder);
         addEvaporationConfig(builder);
+        addRainConfig(builder);
         CONFIG_SPEC = builder.build();
     }
 
@@ -28,6 +29,9 @@ public class Config {
     public static ForgeConfigSpec.DoubleValue evaporationSmoothness;
     public static ForgeConfigSpec.ConfigValue<Integer> evaporationMaxHeight;
     public static ForgeConfigSpec.DoubleValue evaporationSunCoefficient;
+
+    public static ForgeConfigSpec.BooleanValue rainModEnabled;
+    public static ForgeConfigSpec.ConfigValue<Integer> rainChunkHumidityThreshold;
 
     private static void buildAccumulationConfig(ForgeConfigSpec.Builder builder) {
         builder.comment(
@@ -133,6 +137,28 @@ public class Config {
                 "1 means evaporation ONLY happens while the sun is out."
             )
             .defineInRange("sun_coefficient", 0.7d, 0d, 1d);
+
+        builder.pop();
+    }
+
+    private static void addRainConfig(ForgeConfigSpec.Builder builder) {
+        builder.comment("Rain mechanics settings");
+        builder.push("rain mechanics");
+
+        rainModEnabled = builder
+            .comment(
+                "Override vanilla rain behavior.",
+                "This makes the chance of rain be a function of much water has been evaporated.",
+                "Accumulation and evaporation must also both be enabled for this setting to be honored."
+            )
+            .define("enabled", true);
+
+        rainChunkHumidityThreshold = builder
+            .comment(
+                "The amount of water evaporated in a chunk for it to be considered 100% humid, in milli-buckets.",
+                "Lower values make rainstorms more frequent, but shorter."
+            )
+            .defineInRange("humidity_threshold", 16_000, 0, Integer.MAX_VALUE);
 
         builder.pop();
     }
