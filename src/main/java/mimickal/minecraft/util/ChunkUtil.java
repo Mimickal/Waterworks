@@ -46,6 +46,10 @@ public class ChunkUtil {
      */
     public static BlockPos getRandomBlockInChunk(ServerLevel world, ChunkHolder chunkHolder) {
         ChunkPos chunkPos = chunkHolder.getPos();
+        return getRandomBlockInChunk(world, chunkPos);
+    }
+    
+    public static BlockPos getRandomBlockInChunk(ServerLevel world, ChunkPos chunkPos) {
         return world.getBlockRandomPos(
             chunkPos.getMinBlockX(), 0 /* Y */, chunkPos.getMinBlockZ(), 15 /* Chunk width */
         );

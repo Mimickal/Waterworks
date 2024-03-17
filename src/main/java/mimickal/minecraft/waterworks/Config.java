@@ -18,18 +18,23 @@ public class Config {
         CONFIG_SPEC = builder.build();
     }
 
+    // Accumulation fields
     public static ForgeConfigSpec.BooleanValue accumulationEnabled;
     public static ForgeConfigSpec.DoubleValue accumulationIntensity;
     public static ForgeConfigSpec.DoubleValue accumulationSmoothness;
     public static ForgeConfigSpec.ConfigValue<Integer> accumulationMaxHeight;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> accumulationBlacklist;
 
+    // Evaporation fields
     public static ForgeConfigSpec.BooleanValue evaporationEnabled;
     public static ForgeConfigSpec.DoubleValue evaporationIntensity;
     public static ForgeConfigSpec.DoubleValue evaporationSmoothness;
     public static ForgeConfigSpec.ConfigValue<Integer> evaporationMaxHeight;
     public static ForgeConfigSpec.DoubleValue evaporationSunCoefficient;
+    public static ForgeConfigSpec.BooleanValue chunkVanillaHumidity;
+    public static ForgeConfigSpec.ConfigValue<Double> chunkDefaultHumidityPercent;
 
+    // Rain fields
     public static ForgeConfigSpec.BooleanValue rainModEnabled;
     public static ForgeConfigSpec.ConfigValue<Integer> rainChunkHumidityThreshold;
 
@@ -138,6 +143,21 @@ public class Config {
             )
             .defineInRange("sun_coefficient", 0.7d, 0d, 1d);
 
+        chunkVanillaHumidity = builder
+            .comment(
+                "Determines a chunk's initial humidity using its biome's vanilla rain downfall value.",
+                "For example, all chunks in a biome with a downfall value of 0.3 will start at a 30% chance of rain.",
+                "This helps speed up the first rainstorm in new areas. If you're not sure, leave this enabled."
+            )
+            .define("initial_humidity_vanilla", true);
+
+        chunkDefaultHumidityPercent = builder
+            .comment(
+                "Scale initial chunk humidity by this percentage.",
+                "Values above 100 and negative values are acceptable, but will have adverse effects on the rain system."
+            )
+            .define("initial_humidity_percent", 50d);
+
         builder.pop();
     }
 
@@ -148,8 +168,9 @@ public class Config {
         rainModEnabled = builder
             .comment(
                 "Override vanilla rain behavior.",
-                "This makes the chance of rain be a function of much water has been evaporated.",
-                "Accumulation and evaporation must also both be enabled for this setting to be honored."
+                "This makes the chance of rain be a function of \"humidity\", i.e. how much water has been evaporated.",
+                "The higher the humidity, the more likely rain is. Rain will continue until humidity has come down.",
+                "Accumulation and evaporation must also both be enabled for this setting to have an effect."
             )
             .define("enabled", true);
 
@@ -158,7 +179,7 @@ public class Config {
                 "The amount of water evaporated in a chunk for it to be considered 100% humid, in milli-buckets.",
                 "Lower values make rainstorms more frequent, but shorter."
             )
-            .defineInRange("humidity_threshold", 16_000, 0, Integer.MAX_VALUE);
+            .defineInRange("humidity_threshold", 5_000, 0, Integer.MAX_VALUE);
 
         builder.pop();
     }

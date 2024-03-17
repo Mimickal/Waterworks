@@ -1,6 +1,8 @@
 package mimickal.minecraft.waterworks.eva;
 
 import com.mojang.logging.LogUtils;
+import mimickal.minecraft.util.ChunkUtil;
+import mimickal.minecraft.waterworks.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -37,16 +39,21 @@ public class EvaData extends SavedData {
         }
 
         DimensionDataStorage storage = level.getDataStorage();
-        // This calls two different versions of the constructor.
-        return storage.computeIfAbsent(EvaData::new, EvaData::new, SAVE_NAME);
+        return storage.computeIfAbsent(
+            (loadedDataTag) -> new EvaData(level, loadedDataTag),
+            () -> new EvaData(level),
+            SAVE_NAME
+        );
     }
 
     // TODO This could get prohibitively large if a world gets big enough.
     /** A measure of water currently "evaporated" per-chunk. */
     private final Map<ChunkPos, Integer> humidity;
+    private final ServerLevel world;
 
     /** This constructor is called when loading the first time (i.e. no data on disk). */
-    private EvaData() {
+    private EvaData(ServerLevel world) {
+        this.world = world;
         humidity = new HashMap<>();
     }
 
@@ -54,7 +61,8 @@ public class EvaData extends SavedData {
      * This constructor is called when deserializing from disk.
      * @param topLevelTag the incoming serialized data from disk.
      */
-    private EvaData(CompoundTag topLevelTag) {
+    private EvaData(ServerLevel world, CompoundTag topLevelTag) {
+        this.world = world;
         this.humidity = topLevelTag.getList(TAG_NAME, Tag.TAG_COMPOUND)
             .stream()
             .map(tag -> (CompoundTag) tag)
@@ -85,7 +93,10 @@ public class EvaData extends SavedData {
      * @return Amount in milli-buckets.
      */
     public Integer getHumidity(ChunkPos pos) {
-        return this.humidity.getOrDefault(pos, 0);
+        if (!this.humidity.containsKey(pos)) {
+            this.humidity.put(pos, calcInitialHumidity(pos));
+        }
+        return this.humidity.get(pos);
     }
 
     /**
@@ -102,7 +113,10 @@ public class EvaData extends SavedData {
      */
     public void changeHumidity(ChunkPos pos, Integer amountChanged) {
         LOGGER.debug("Humidity change {} at chunk {}", amountChanged, pos);
-        this.humidity.putIfAbsent(pos, 0);
+        if (this.humidity.containsKey(pos)) {
+            this.humidity.put(pos, calcInitialHumidity(pos));
+        }
+
         this.humidity.put(pos, this.humidity.get(pos) + amountChanged);
         this.setDirty();
     }
@@ -131,6 +145,32 @@ public class EvaData extends SavedData {
      */
     public void setHumidity(BlockPos pos, Integer amount) {
         setHumidity(new ChunkPos(pos), amount);
+    }
+
+    /**
+     * Calculates the initial humidity for the given chunk.
+     * <p>
+     * A chunk can span more than one biome. When {@link Config#chunkVanillaHumidity} is enabled, we just pick
+     * a random block in the chunk and use that block's biome's downfall value for the calculation.
+     */
+    private Integer calcInitialHumidity(ChunkPos pos) {
+        BlockPos blockPos = ChunkUtil.getRandomBlockInChunk(this.world, pos);
+        return calcInitialHumidity(blockPos);
+    }
+
+    /** Calculates the initial humidity for the chunk the given block pos resides in. */
+    private Integer calcInitialHumidity(BlockPos pos) {
+        int humidity = (int)(
+            Config.chunkDefaultHumidityPercent.get() / 100 *
+            Config.rainChunkHumidityThreshold.get() *
+            (Config.chunkVanillaHumidity.get()
+                ? this.world.getBiome(pos).value().getDownfall()
+                : 1
+            )
+        );
+
+        LOGGER.debug("Initializing {} with {}", new ChunkPos(pos), humidity);
+        return humidity;
     }
 
     /** Helper for serializing and deserializing humidity data. */
