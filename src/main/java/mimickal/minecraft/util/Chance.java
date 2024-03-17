@@ -28,6 +28,7 @@ public class Chance {
             return intensity;
         }
 
-        return intensity / smoothness;
+        // This becomes a fraction, so multiply by 100 to get a percent again.
+        return 100 * intensity / smoothness;
     }
 }
