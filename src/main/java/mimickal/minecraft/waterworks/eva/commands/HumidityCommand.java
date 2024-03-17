@@ -24,6 +24,10 @@ import java.util.stream.Collectors;
 public class HumidityCommand {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String CMD_NAME = "humidity";
+    private static final String ARG_X = "x";
+    private static final String ARG_Z = "z";
+    private static final String ARG_AMT = "amount";
+
 
     // Minecraft's command definition system is completely insane,
     // and the vanilla definitions are (somehow) even more insane.
@@ -39,7 +43,11 @@ public class HumidityCommand {
 
     /** Subcommand: {@code humidity set} */
     private static final LiteralArgumentBuilder<CommandSourceStack> SUBCMD_SET =
-        Commands.literal("set");
+        Commands.literal("set")
+            .then(Commands.argument(ARG_AMT, IntegerArgumentType.integer())
+                .executes(HumidityCommand::setHumidityCurrentChunk)
+                .then(addOptionalCoordinateArgs(HumidityCommand::setHumidityAtPos))
+            );
 
     /** Top-level command: {@code humidity} */
     private static final LiteralArgumentBuilder<CommandSourceStack> CMD_HUMIDITY =
@@ -62,11 +70,11 @@ public class HumidityCommand {
     private static RequiredArgumentBuilder<CommandSourceStack, Integer> addOptionalCoordinateArgs(
         TriFunction<CommandContext<CommandSourceStack>, Integer, Integer, Integer> executor
     ) {
-        return Commands.argument("x", IntegerArgumentType.integer())
-            .then(Commands.argument("z", IntegerArgumentType.integer())
+        return Commands.argument(ARG_X, IntegerArgumentType.integer())
+            .then(Commands.argument(ARG_Z, IntegerArgumentType.integer())
                 .executes(context -> {
-                    int x = IntegerArgumentType.getInteger(context, "x");
-                    int z = IntegerArgumentType.getInteger(context, "z");
+                    int x = IntegerArgumentType.getInteger(context, ARG_X);
+                    int z = IntegerArgumentType.getInteger(context, ARG_Z);
                     return executor.apply(context, x, z);
                 })
             );
@@ -90,6 +98,30 @@ public class HumidityCommand {
         int humidity = EvaData.get(world).getHumidity(pos);
         sendMsg(context, "Humidity at", pos, ":", humidity, "mB");
         return humidity;
+    }
+
+    /** Sets the humidity at the chunk of the player who invoked this command. */
+    private static int setHumidityCurrentChunk(CommandContext<CommandSourceStack> context) {
+        BlockPos playerPosition = new BlockPos(context.getSource().getPosition());
+        ChunkPos playerChunk = new ChunkPos(playerPosition);
+        return setHumidityCommon(context, playerChunk);
+    }
+
+    /** Sets the humidity at the chunk given in the coordinates. */
+    private static int setHumidityAtPos(CommandContext<CommandSourceStack> context, int x, int z) {
+        return setHumidityCommon(context, new ChunkPos(x, z));
+    }
+
+    /** Common logic for changing humidity at a chunk. */
+    private static int setHumidityCommon(CommandContext<CommandSourceStack> context, ChunkPos pos) {
+        ServerLevel world = context.getSource().getLevel();
+        int newAmount = IntegerArgumentType.getInteger(context, ARG_AMT);
+
+        int oldAmount = EvaData.get(world).getHumidity(pos);
+        EvaData.get(world).setHumidity(pos, newAmount);
+
+        sendMsg(context, "Setting humidity at", pos, ":", oldAmount, "mB", "->", newAmount, "mB");
+        return newAmount;
     }
 
     /** Prints a message to the screen in response to a command. */

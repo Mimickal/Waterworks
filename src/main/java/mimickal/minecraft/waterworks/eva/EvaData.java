@@ -115,6 +115,24 @@ public class EvaData extends SavedData {
         changeHumidity(new ChunkPos(pos), amountChanged);
     }
 
+    /**
+     * <b>Sets</b> the amount of evaporated water stored for the given chunk.
+     * @param amount amount in milli-buckets.
+     */
+    public void setHumidity(ChunkPos pos, Integer amount) {
+        LOGGER.debug("Humidity set {} at chunk {}", amount, pos);
+        this.humidity.put(pos, amount);
+        this.setDirty();
+    }
+
+    /**
+     * <b>Sets</b> the amount of evaporated water stored for the chunk the given block pos resides in.
+     * @param amount amount in milli-buckets.
+     */
+    public void setHumidity(BlockPos pos, Integer amount) {
+        setHumidity(new ChunkPos(pos), amount);
+    }
+
     /** Helper for serializing and deserializing humidity data. */
     private static class HumidityTag extends CompoundTag {
         private static final String X = "x";
