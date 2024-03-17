@@ -21,7 +21,7 @@ public class Rain {
     private static final Map<ResourceKey<Level>, TickGuard.Random> TICK_GUARDS = new HashMap<>();
 
     private static final int RAIN_DELAY_MIN = 10 * 20; // 10 seconds
-    private static final int RAIN_DELAY_MAX = 10 * 20; // 30 seconds
+    private static final int RAIN_DELAY_MAX = 30 * 20; // 30 seconds
 
     // TODO what is wrong with me? Just expose this as a configurable value with a sane default.
     /**
@@ -29,6 +29,18 @@ public class Rain {
      * This allows us to express a chunk's humidity as a percentage.
      */
     private static final double MAX_HUMIDITY = 16 * 16; // Surface area of a chunk
+
+    /**
+     * This is the {@code a} in a best-fit regression for {@code y = x ^ a} using the following data points:<br>
+     * {@code [x, y]: [0.0, 0.0], [0.5, 0.1], [0.75, 0.275], [1.0, 1.0]}
+     * <p>
+     * The curve this creates seems quite steep, but remember this chance is rolled every time this event runs.
+     * For example, let's say we run this event every 30 seconds. If there's a 5% rain chance at 50% humidity,
+     * it will take 20 events on average to roll a rainstorm, or about 10 minutes.
+     * <p>
+     * <a href="https://www.desmos.com/calculator">This online tool</a> was used to calculate the regression.
+     */
+    private static final double RAIN_CHANCE_EXPONENT = 4.23966;
 
     /**
      * {@link TickEvent.WorldTickEvent} that determines when rainstorms start and controls how long they last.
@@ -61,14 +73,28 @@ public class Rain {
         LOGGER.debug("Rain check in {} (humidity: {})", name(world), avgHumidity);
 
         if (world.isRaining()) {
-            if (Chance.decimal(1 - avgHumidity)) {
+            // Subtracting from 1 here "mirrors" the probability on the Y-axis
+            if (Chance.decimal(rainChanceFromHumidity(1 - avgHumidity))) {
                 stopRaining(world);
             }
         } else {
-            if (Chance.decimal(avgHumidity)) {
+            if (Chance.decimal(rainChanceFromHumidity(avgHumidity))) {
                 startRaining(world);
             }
         }
+    }
+
+    /**
+     * Translates a percent humidity value to a percent rain chance (as a {@link Double} 0.0 - 1.0).
+     * <p>
+     * Relative humidity <i>is</i> a percentage already, but we can't just directly use it as the percent chance
+     * to start or stop raining. If we did, humidity would stabilize around 50%, and the weather would flip-flop
+     * between clear and rain every time we check.
+     * <p>
+     * Instead, we apply a curve so the rain chance "accelerates" proportionally with humidity.
+     */
+    private static double rainChanceFromHumidity(double humidity) {
+        return Math.pow(humidity, RAIN_CHANCE_EXPONENT);
     }
 
     /** Start raining indefinitely in the given world. */
