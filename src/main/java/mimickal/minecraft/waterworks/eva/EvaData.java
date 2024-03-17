@@ -67,7 +67,7 @@ public class EvaData extends SavedData {
             .stream()
             .map(tag -> (CompoundTag) tag)
             .collect(HashMap::new, HumidityTag::toMap, HashMap::putAll);
-        LOGGER.debug("Loaded {}", this.humidity);
+        LOGGER.debug("Loaded humidity data ({} chunks)", this.humidity.size());
     }
 
     /**
@@ -84,7 +84,7 @@ public class EvaData extends SavedData {
             .collect(ListTag::new, ListTag::add, ListTag::addAll);
 
         topLevelTag.put(TAG_NAME, humidityList);
-        LOGGER.debug("Serializing {}", humidityList);
+        LOGGER.debug("Saving humidity data ({} chunks)", humidityList.size());
         return topLevelTag;
     }
 
@@ -92,10 +92,9 @@ public class EvaData extends SavedData {
      * Gets the amount of evaporated water stored for the given chunk.
      * @return Amount in milli-buckets.
      */
+    @NotNull
     public Integer getHumidity(ChunkPos pos) {
-        if (!this.humidity.containsKey(pos)) {
-            this.humidity.put(pos, calcInitialHumidity(pos));
-        }
+        this.humidity.computeIfAbsent(pos, this::calcInitialHumidity);
         return this.humidity.get(pos);
     }
 
@@ -103,6 +102,7 @@ public class EvaData extends SavedData {
      * Gets the amount of evaporated water stored for the chunk the given block pos resides in.
      * @return Amount in milli-buckets.
      */
+    @NotNull
     public Integer getHumidity(BlockPos pos) {
         return getHumidity(new ChunkPos(pos));
     }
@@ -113,10 +113,7 @@ public class EvaData extends SavedData {
      */
     public void changeHumidity(ChunkPos pos, Integer amountChanged) {
         LOGGER.debug("Humidity change {} at chunk {}", amountChanged, pos);
-        if (this.humidity.containsKey(pos)) {
-            this.humidity.put(pos, calcInitialHumidity(pos));
-        }
-
+        this.humidity.computeIfAbsent(pos, this::calcInitialHumidity);
         this.humidity.put(pos, this.humidity.get(pos) + amountChanged);
         this.setDirty();
     }
@@ -145,6 +142,28 @@ public class EvaData extends SavedData {
      */
     public void setHumidity(BlockPos pos, Integer amount) {
         setHumidity(new ChunkPos(pos), amount);
+    }
+
+    /** <b>Resets</b> the amount of evaporated water stored for the given chunk. */
+    public void resetHumidity(ChunkPos pos) {
+        // This will regenerate using the default value next time we try to do something with this chunk.
+        LOGGER.debug("Humidity unset at chunk {}", pos);
+        this.humidity.remove(pos);
+        this.setDirty();
+    }
+
+    /** <b>Resets</b> the amount of evaporated water stored for the chunk the given block pos resides in. */
+    public void resetHumidity(BlockPos pos) {
+        resetHumidity(new ChunkPos(pos));
+    }
+
+    /** <b>COMPLETELY DELETES</b> the map of evaporated water stored for this world. */
+    public void resetAllHumidity(boolean seriously) {
+        // Like with reset, every chunk's default value will be regenerated next time they're accessed.
+        if (!seriously) return;
+        LOGGER.debug("CLEARING humidity map for {}", this.world.dimension().location());
+        this.humidity.clear();
+        this.setDirty();
     }
 
     /**

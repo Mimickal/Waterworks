@@ -49,12 +49,22 @@ public class HumidityCommand {
                 .then(addOptionalCoordinateArgs(HumidityCommand::setHumidityAtPos))
             );
 
+    /** Subcommand: {@code humidity reset [all] } */
+    private static final LiteralArgumentBuilder<CommandSourceStack> SUBCMD_RESET =
+        Commands.literal("reset")
+            .executes(HumidityCommand::resetHumidityCurrentChunk)
+            .then(Commands.literal("all")
+                .executes(HumidityCommand::resetHumidityAll)
+            )
+            .then(addOptionalCoordinateArgs(HumidityCommand::resetHumidityAtPos));
+
     /** Top-level command: {@code humidity} */
     private static final LiteralArgumentBuilder<CommandSourceStack> CMD_HUMIDITY =
         Commands.literal(CMD_NAME)
             .requires(req -> req.hasPermission(Commands.LEVEL_GAMEMASTERS))
             .then(SUBCMD_GET)
-            .then(SUBCMD_SET);
+            .then(SUBCMD_SET)
+            .then(SUBCMD_RESET);
 
     @SubscribeEvent
     public static void register(RegisterCommandsEvent event) {
@@ -82,9 +92,7 @@ public class HumidityCommand {
 
     /** Prints the humidity at the chunk of the player who invoked this command. */
     private static int getHumidityCurrentChunk(CommandContext<CommandSourceStack> context) {
-        BlockPos playerPosition = new BlockPos(context.getSource().getPosition());
-        ChunkPos playerChunk = new ChunkPos(playerPosition);
-        return printHumidityCommon(context, playerChunk);
+        return printHumidityCommon(context, getPlayerChunk(context));
     }
 
     /** Prints the humidity at the chunk given in the coordinates. */
@@ -102,9 +110,7 @@ public class HumidityCommand {
 
     /** Sets the humidity at the chunk of the player who invoked this command. */
     private static int setHumidityCurrentChunk(CommandContext<CommandSourceStack> context) {
-        BlockPos playerPosition = new BlockPos(context.getSource().getPosition());
-        ChunkPos playerChunk = new ChunkPos(playerPosition);
-        return setHumidityCommon(context, playerChunk);
+        return setHumidityCommon(context, getPlayerChunk(context));
     }
 
     /** Sets the humidity at the chunk given in the coordinates. */
@@ -116,12 +122,45 @@ public class HumidityCommand {
     private static int setHumidityCommon(CommandContext<CommandSourceStack> context, ChunkPos pos) {
         ServerLevel world = context.getSource().getLevel();
         int newAmount = IntegerArgumentType.getInteger(context, ARG_AMT);
-
         int oldAmount = EvaData.get(world).getHumidity(pos);
         EvaData.get(world).setHumidity(pos, newAmount);
 
         sendMsg(context, "Setting humidity at", pos, ":", oldAmount, "mB", "->", newAmount, "mB");
         return newAmount;
+    }
+
+    /** Resets the humidity to default at the chunk of the player who invoked this command. */
+    private static int resetHumidityCurrentChunk(CommandContext<CommandSourceStack> context) {
+        return resetHumidityCommon(context, getPlayerChunk(context));
+    }
+
+    /** Resets the humidity to default at the chunk given in the coordinates. */
+    private static int resetHumidityAtPos(CommandContext<CommandSourceStack> context, int x, int z) {
+        return resetHumidityCommon(context, new ChunkPos(x, z));
+    }
+
+    /** Common logic for resetting humidity at a chunk. */
+    private static int resetHumidityCommon(CommandContext<CommandSourceStack> context, ChunkPos pos) {
+        ServerLevel world = context.getSource().getLevel();
+        EvaData.get(world).resetHumidity(pos);
+        int newAmount = EvaData.get(world).getHumidity(pos);
+
+        sendMsg(context, "Resetting humidity at", pos, ":", newAmount, "mB");
+        return 0; // Doesn't correspond to anything, but also doesn't matter...?
+    }
+
+    /** Resets <i>the entire</i> humidity map to default (actually it just deletes the map). */
+    private static int resetHumidityAll(CommandContext<CommandSourceStack> context) {
+        ServerLevel world = context.getSource().getLevel();
+        EvaData.get(world).resetAllHumidity(true);
+        sendMsg(context, "Resetting ALL humidity");
+        return 0; // Still doesn't correspond to anything.
+    }
+
+    /** Returns the position of the chunk the player who invoked this command is in. */
+    private static ChunkPos getPlayerChunk(CommandContext<CommandSourceStack> context) {
+        BlockPos playerPosition = new BlockPos(context.getSource().getPosition());
+        return new ChunkPos(playerPosition);
     }
 
     /** Prints a message to the screen in response to a command. */
