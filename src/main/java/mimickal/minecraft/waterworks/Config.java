@@ -1,22 +1,18 @@
 package mimickal.minecraft.waterworks;
 
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
+import com.google.common.collect.ImmutableList;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.*;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.ForgeRegistryEntry;
 
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Objects;
 
 public class Config {
     public static final ForgeConfigSpec CONFIG_SPEC;
     public static final String CONFIG_FILENAME = Waterworks.MOD_NAME + ".toml";
-    static {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        buildAccumulationConfig(builder);
-        addEvaporationConfig(builder);
-        addRainConfig(builder);
-        CONFIG_SPEC = builder.build();
-    }
 
     // Accumulation fields
     public static ForgeConfigSpec.BooleanValue accumulationEnabled;
@@ -38,6 +34,29 @@ public class Config {
     // Rain fields
     public static ForgeConfigSpec.BooleanValue rainModEnabled;
     public static ForgeConfigSpec.ConfigValue<Integer> rainChunkHumidityThreshold;
+
+    // Constants
+    // These need to be defined before the below static block
+    private static final List<Class<? extends Block>> BLACKLIST_BLOCK_GROUPS = ImmutableList.of(
+        CropBlock.class,
+        FarmBlock.class,
+        FenceBlock.class,
+        StemBlock.class
+    );
+
+    private static final List<Block> BLACKLIST_BLOCKS = ImmutableList.of(
+        Blocks.LAVA,
+        Blocks.MELON,
+        Blocks.PUMPKIN
+    );
+
+    static {
+        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        buildAccumulationConfig(builder);
+        addEvaporationConfig(builder);
+        addRainConfig(builder);
+        CONFIG_SPEC = builder.build();
+    }
 
     private static void buildAccumulationConfig(ForgeConfigSpec.Builder builder) {
         builder.comment(
@@ -75,33 +94,24 @@ public class Config {
 
         accumulationBlacklist = builder
             .comment(
-                "Never accumulate water on top of these blocks.",
+                "Never accumulate water on top of these blocks. These are the blocks' registry names.",
                 "Useful to avoid breaking surface lava and crops with accumulated water."
             )
             .defineList("blacklist",
-                Stream.of(
-                    Blocks.LAVA,
-
-                    // Fences
-                    // TODO this sucks. Can we define all fences in one go?
-                    Blocks.ACACIA_FENCE,
-                    Blocks.BIRCH_FENCE,
-                    Blocks.CRIMSON_FENCE,
-                    Blocks.JUNGLE_FENCE,
-
-                    // Crops
-                    // TODO this also sucks for the same reason
-                    Blocks.BEETROOTS,
-                    Blocks.MELON,
-                    Blocks.MELON_STEM,
-                    Blocks.PUMPKIN,
-                    Blocks.PUMPKIN_STEM,
-                    Blocks.WHEAT
-
-                    // TODO tilled soil?
-                ).map(Block::getDescriptionId).toList(),
-                // TODO Actually validate these are real blocks
-                block -> true
+                ForgeRegistries.BLOCKS.getValues()
+                    .stream()
+                    .filter(block -> (
+                        BLACKLIST_BLOCK_GROUPS.stream().anyMatch(klass -> klass.isInstance(block)) ||
+                        BLACKLIST_BLOCKS.contains(block)
+                    ))
+                    .map(ForgeRegistryEntry::getRegistryName)
+                    .filter(Objects::nonNull)
+                    .map(ResourceLocation::toString)
+                    .toList(),
+                (blockName) -> (
+                    blockName instanceof String &&
+                    ForgeRegistries.BLOCKS.containsKey(new ResourceLocation((String) blockName))
+                )
             );
 
         builder.pop();

@@ -8,23 +8,36 @@ import mimickal.minecraft.waterworks.Config;
 import mimickal.minecraft.waterworks.eva.EvaData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.DistanceManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class Accumulation {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<ResourceKey<Level>, TickGuard.Config> TICK_GUARDS = new HashMap<>();
+
+    /**
+     * {@link Config#accumulationBlacklist} as a {@link Set}, to speed up filter operations.
+     * This is recalculated by {@link #onBlacklist} when the underlying config changes.
+     */
+    private static Set<Block> BLACKLIST_SET = new HashSet<>();
+    private static int BLACKLIST_HASH = 0;
 
     /**
      * {@link TickEvent.WorldTickEvent} handler that accumulates water when it's raining.
@@ -58,7 +71,34 @@ public class Accumulation {
             .filter(chunkBlockPos -> world.getBiome(chunkBlockPos).value().getPrecipitation() == Biome.Precipitation.RAIN)
             .filter(chunkBlockPos -> Chance.percent(getAccumulationChance(world, chunkBlockPos)))
             .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
+            .filter(waterPos -> !onBlacklist(world, waterPos.below()))
             .forEach(waterPos -> accumulateAtPosition(world, waterPos));
+    }
+
+    /**
+     * Returns whether the block at the given position is on the configured blacklist.
+     * <p>
+     * Also, recalculates {@link #BLACKLIST_SET} if the underlying config has been modified.
+     */
+    private static boolean onBlacklist(ServerLevel world, BlockPos pos) {
+        // Recalculate accumulation blacklist cache when the underlying list changes.
+        // This may be some React brain rot setting in...
+        if (Config.accumulationEnabled.get().hashCode() != BLACKLIST_HASH) {
+            BLACKLIST_HASH = Config.accumulationBlacklist.get().hashCode();
+            BLACKLIST_SET = Config.accumulationBlacklist.get()
+                .stream()
+                .map(resourceName -> ForgeRegistries.BLOCKS.getValue(new ResourceLocation(resourceName)))
+                .collect(Collectors.toSet());
+        }
+
+        Block block = world.getBlockState(pos).getBlock();
+        boolean isOnList = BLACKLIST_SET.contains(block);
+
+        if (isOnList) {
+            LOGGER.debug("Block {} on blacklist ({})", pos, block);
+        }
+
+        return isOnList;
     }
 
     /**
