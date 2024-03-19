@@ -1,8 +1,7 @@
 modLoader="javafml"
 loaderVersion="[40,)"
-license="AGPL v3.0"
-# A URL to refer people to when problems occur with this mod
-#issueTrackerURL="https://change.me.to.your.issue.tracker.example.invalid/" #optional
+license="AGPL-3.0-only"
+issueTrackerURL="https://github.com/Mimickal/Waterworks/issues"
 [[mods]]
 modId="waterworks"
 version="${file.jarVersion}"
@@ -10,30 +9,12 @@ displayName="Waterworks"
 # TODO updateJSONURL
 # A URL to query for updates for this mod. See the JSON update specification https://mcforge.readthedocs.io/en/latest/gettingstarted/autoupdate/
 #updateJSONURL="https://change.me.example.invalid/updates.json" #optional
-# TODO displayURL
-# A URL for the "homepage" for this mod, displayed in the mod UI
-#displayURL="https://change.me.to.your.mods.homepage.example.invalid/" #optional
-# TODO logoFile
-# A file name (in the root of the mod JAR) containing a logo for display
-# logoFile="examplemod.png" #optional
-credits="Sasai-Kudasai-BM for their Water-Physics-Overhaul mod, Felicis for porting that mod to 1.18.2"
+displayURL="https://github.com/Mimickal/Waterworks"
+logoFile= "waterworks.png"
+credits="Mimickal"
 authors="Mimickal"
 displayTest="MATCH_VERSION"
 description='''
-Waterworks makes water act more like Terraria.
-Water flows, accumulates when it rains, and evaporates when the sun shines.
-Waterworks also adds some tools for manipulating water, like pipes, pumps, and tanks.
+Waterworks is a mod that changes how water behaves in Minecraft.
+Water accumulates when it rains and evaporates when the sun shines. Rain becomes a function of relative humidity.
 '''
-# TODO Water-Physics-Overhaul dependency
-# A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
-#[[dependencies.examplemod]] #optional
-#    # the modid of the dependency
-#    modId="forge" #mandatory
-#    # Does this dependency have to exist - if not, ordering below must be specified
-#    mandatory=true #mandatory
-#    # The version range of the dependency
-#    versionRange="[40,)" #mandatory
-#    # An ordering relationship for the dependency - BEFORE or AFTER required if the relationship is not mandatory
-#    ordering="NONE"
-#    # Side this dependency is applied on - BOTH, CLIENT or SERVER
-#    side="BOTH"

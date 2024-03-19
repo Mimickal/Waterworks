@@ -34,7 +34,7 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', 'waterworks'
+            property 'forge.enabledGameTestNamespaces', archivesBaseName
             mods {
                 waterworks {
                     source sourceSets.main
@@ -46,7 +46,7 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', 'waterworks'
+            property 'forge.enabledGameTestNamespaces', archivesBaseName
             mods {
                 waterworks {
                     source sourceSets.main
@@ -61,7 +61,7 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', 'waterworks'
+            property 'forge.enabledGameTestNamespaces', archivesBaseName
             mods {
                 waterworks {
                     source sourceSets.main
@@ -120,7 +120,7 @@ dependencies {
 jar {
     manifest {
         attributes([
-                "Specification-Title"     : "waterworks",
+                "Specification-Title"     : archivesBaseName,
                 "Specification-Vendor"    : "mimickal",
                 "Specification-Version"   : "1", // We are version 1 of ourselves
                 "Implementation-Title"    : project.name,
