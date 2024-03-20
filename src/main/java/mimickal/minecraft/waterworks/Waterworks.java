@@ -13,6 +13,7 @@ import mimickal.minecraft.waterworks.eva.commands.HumidityCommand;
 import mimickal.minecraft.waterworks.eva.events.Accumulation;
 import mimickal.minecraft.waterworks.eva.events.Evaporation;
 import mimickal.minecraft.waterworks.eva.events.Rain;
+import mimickal.minecraft.waterworks.tool.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.common.MinecraftForge;
@@ -65,6 +66,9 @@ public class Waterworks
         // Register paintings
         // This registration call is picky, for some reason. We can't use EVENT_BUS here.
         Painting.MOTIVE_REGISTRY.register(FMLJavaModLoadingContext.get().getModEventBus());
+
+        // Register tools
+        Items.ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
     }
 
     private void setup(final FMLCommonSetupEvent event)
