@@ -13,7 +13,8 @@ import mimickal.minecraft.waterworks.eva.commands.HumidityCommand;
 import mimickal.minecraft.waterworks.eva.events.Accumulation;
 import mimickal.minecraft.waterworks.eva.events.Evaporation;
 import mimickal.minecraft.waterworks.eva.events.Rain;
-import mimickal.minecraft.waterworks.tool.Items;
+import mimickal.minecraft.waterworks.tool.ModItems;
+import mimickal.minecraft.waterworks.tool.Trades;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.common.MinecraftForge;
@@ -60,6 +61,9 @@ public class Waterworks
         MinecraftForge.EVENT_BUS.register(Evaporation.class);
         MinecraftForge.EVENT_BUS.register(Rain.class);
 
+        // Other events
+        MinecraftForge.EVENT_BUS.register(Trades.class);
+
         // Commands
         MinecraftForge.EVENT_BUS.register(HumidityCommand.class);
 
@@ -68,7 +72,7 @@ public class Waterworks
         Painting.MOTIVE_REGISTRY.register(FMLJavaModLoadingContext.get().getModEventBus());
 
         // Register tools
-        Items.ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
+        ModItems.ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
     }
 
     private void setup(final FMLCommonSetupEvent event)
