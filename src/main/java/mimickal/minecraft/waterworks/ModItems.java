@@ -5,9 +5,8 @@
  * Waterworks is free software under the GNU Affero General Public License v3.0.
  * See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html> for more information.
  ****************************************************************************************/
-package mimickal.minecraft.waterworks.tool;
+package mimickal.minecraft.waterworks;
 
-import mimickal.minecraft.waterworks.Waterworks;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
@@ -20,12 +19,12 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
 public class ModItems {
-    public static final DeferredRegister<Item> ITEMS =
+    public static final DeferredRegister<Item> REGISTRY =
         DeferredRegister.create(ForgeRegistries.ITEMS, Waterworks.MOD_NAME);
 
     /** Register an item with properties. */
     public static RegistryObject<Item> register(String name, Item.Properties properties) {
-        return ITEMS.register(name, () -> new Item(properties));
+        return REGISTRY.register(name, () -> new Item(properties));
     }
 
     /** Register an item from a block. */
@@ -34,7 +33,7 @@ public class ModItems {
         RegistryObject<Block> registeredBlock,
         Item.Properties properties
     ) {
-        return ITEMS.register(name, () -> new BlockItem(registeredBlock.get(), properties));
+        return REGISTRY.register(name, () -> new BlockItem(registeredBlock.get(), properties));
     }
 
     public static final RegistryObject<Item> AQUAMARINE = register("aquamarine",

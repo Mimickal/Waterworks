@@ -8,7 +8,6 @@
 package mimickal.minecraft.waterworks;
 
 import mimickal.minecraft.waterworks.decoration.StatueBlock;
-import mimickal.minecraft.waterworks.tool.ModItems;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -22,12 +21,12 @@ import net.minecraftforge.registries.RegistryObject;
 import java.util.function.Supplier;
 
 public class ModBlocks {
-    public static final DeferredRegister<Block> BLOCK_REGISTRY =
+    public static final DeferredRegister<Block> REGISTRY =
         DeferredRegister.create(ForgeRegistries.BLOCKS, Waterworks.MOD_NAME);
 
     /** Register a block. This will also register an item. See {@link ModItems#registerBlockItem}. */
     private static RegistryObject<Block> register(String name, Supplier<Block> block) {
-        RegistryObject<Block> registeredBlock = BLOCK_REGISTRY.register(name, block);
+        RegistryObject<Block> registeredBlock = REGISTRY.register(name, block);
         ModItems.registerBlockItem(name, registeredBlock, new Item.Properties().tab(CreativeModeTab.TAB_MISC));
         return registeredBlock;
     }

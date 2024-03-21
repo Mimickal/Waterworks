@@ -1,6 +1,14 @@
+/****************************************************************************************
+ * This file is part of Waterworks, a Minecraft mod that changes water dynamics.
+ * Copyright (C) 2024 Mimickal (Mia Moretti).
+ *
+ * Waterworks is free software under the GNU Affero General Public License v3.0.
+ * See LICENSE or <https://www.gnu.org/licenses/agpl-3.0.en.html> for more information.
+ ****************************************************************************************/
 package mimickal.minecraft.waterworks.tool;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import mimickal.minecraft.waterworks.ModItems;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.npc.VillagerTrades;
 import net.minecraft.world.item.ItemStack;
