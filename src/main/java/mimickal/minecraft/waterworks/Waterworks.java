@@ -72,6 +72,7 @@ public class Waterworks
         Painting.MOTIVE_REGISTRY.register(FMLJavaModLoadingContext.get().getModEventBus());
 
         // Register tools
+        ModBlocks.BLOCK_REGISTRY.register(FMLJavaModLoadingContext.get().getModEventBus());
         ModItems.ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
     }
 
