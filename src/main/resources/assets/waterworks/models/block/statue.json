@@ -1,6 +1,5 @@
 {
 	"credit": "Made with Blockbench",
-	"parent": "block",
 	"textures": {
 		"1": "waterworks:block/statue",
 		"particle": "waterworks:block/statue"
