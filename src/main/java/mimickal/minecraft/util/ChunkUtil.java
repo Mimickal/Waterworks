@@ -34,11 +34,12 @@ public class ChunkUtil {
             Iterable<ChunkHolder> chunkIterator = (Iterable<ChunkHolder>) getChunks.invoke(chunkMap);
 
             return chunkIterator;
-
-            // Any of these exceptions being thrown means we messed something up above, so just explode.
         } catch (NoSuchMethodException e) {
-            throw new RuntimeException("ServerChunkCache.getChunks() isn't a method, apparently.", e);
+            // This can happen when running locally. I don't know why.
+            // Returning an empty list helps us fail-safe, so no logic that depends on the above assumptions will run.
+            return List.of();
         } catch (IllegalAccessException | InvocationTargetException e) {
+            // These exceptions being thrown means we messed something up above, so just explode.
             throw new RuntimeException("Failed to invoke ServerChunkCache.getChunks()", e);
         }
     }
