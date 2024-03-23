@@ -28,7 +28,8 @@ import java.util.Map;
 public class EvaData extends SavedData {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String SAVE_NAME = "eva";
-    private static final String TAG_NAME = "humidity";
+    private static final String HUMIDITY_TAG_NAME = "humidity";
+    private static final String STATUE_TAG_NAME = "statue";
 
     /**
      * Gets the data manager for the given level, creating it if it doesn't exist yet.
@@ -55,13 +56,15 @@ public class EvaData extends SavedData {
 
     // TODO This could get prohibitively large if a world gets big enough.
     /** A measure of water currently "evaporated" per-chunk. */
-    private final Map<ChunkPos, Integer> humidity;
+    private final ChunkValueMap humidity;
+    private final ChunkValueMap statues;
     private final ServerLevel world;
 
     /** This constructor is called when loading the first time (i.e. no data on disk). */
     private EvaData(ServerLevel world) {
         this.world = world;
-        humidity = new HashMap<>();
+        humidity = new ChunkValueMap();
+        statues = new ChunkValueMap();
     }
 
     /**
@@ -70,11 +73,10 @@ public class EvaData extends SavedData {
      */
     private EvaData(ServerLevel world, CompoundTag topLevelTag) {
         this.world = world;
-        this.humidity = topLevelTag.getList(TAG_NAME, Tag.TAG_COMPOUND)
-            .stream()
-            .map(tag -> (CompoundTag) tag)
-            .collect(HashMap::new, HumidityTag::toMap, HashMap::putAll);
+        this.humidity = deserializeToMap(topLevelTag.getList(HUMIDITY_TAG_NAME, Tag.TAG_COMPOUND));
+        this.statues = deserializeToMap(topLevelTag.getList(STATUE_TAG_NAME, Tag.TAG_COMPOUND));
         LOGGER.debug("Loaded humidity data ({} chunks)", this.humidity.size());
+        LOGGER.debug("Loaded statue data ({} chunks)", this.statues.size());
     }
 
     /**
@@ -85,15 +87,16 @@ public class EvaData extends SavedData {
     @NotNull
     @Override
     public CompoundTag save(CompoundTag topLevelTag) {
-        ListTag humidityList = this.humidity.entrySet()
-            .stream()
-            .map(HumidityTag::new)
-            .collect(ListTag::new, ListTag::add, ListTag::addAll);
-
-        topLevelTag.put(TAG_NAME, humidityList);
+        ListTag humidityList = serializeToTag(this.humidity);
+        ListTag statueList = serializeToTag(this.statues);
+        topLevelTag.put(HUMIDITY_TAG_NAME, humidityList);
+        topLevelTag.put(STATUE_TAG_NAME, statueList);
         LOGGER.debug("Saving humidity data ({} chunks)", humidityList.size());
+        LOGGER.debug("Saving statue data ({} chunks)", statueList.size());
         return topLevelTag;
     }
+
+    /* Humidity functions */
 
     /**
      * Gets the amount of evaporated water stored for the given chunk.
@@ -199,20 +202,71 @@ public class EvaData extends SavedData {
         return humidity;
     }
 
-    /** Helper for serializing and deserializing humidity data. */
-    private static class HumidityTag extends CompoundTag {
+    /* Statue functions */
+
+    /** Gets the number of statues in the given chunk. */
+    @NotNull
+    public Integer getStatueCount(ChunkPos pos) {
+        return this.statues.getOrDefault(pos, 0);
+    }
+
+    /** Gets the number of statues in the chunk the given block pos resides in. */
+    @NotNull
+    public Integer getStatueCount(BlockPos pos) {
+        return getStatueCount(new ChunkPos(pos));
+    }
+
+    /** Changes the number of statues stored for the given chunk. Deletes the entry if resulting value is 0. */
+    public void changeStatueCount(ChunkPos pos, Integer amountChanged) {
+        LOGGER.debug("Statue count change {} at chunk {}", amountChanged, pos);
+        this.statues.put(pos, this.statues.getOrDefault(pos, 0) + amountChanged);
+
+        // To save space, delete entries for chunks with no statues (i.e. most of them).
+        if (this.statues.get(pos) == 0) {
+            this.statues.remove(pos);
+        }
+
+        this.setDirty();
+    }
+
+    /** Changes the number of statues stored for the chunk the given block pos resides in. */
+    public void changeStatueCount(BlockPos pos, Integer amountChanged) {
+        changeStatueCount(new ChunkPos(pos), amountChanged);
+    }
+
+    /* Helpers */
+
+    /** Specialization of a {@link HashMap} that maps numerical values by chunk. */
+    private static class ChunkValueMap extends HashMap<ChunkPos, Integer> { }
+
+    private static ChunkValueMap deserializeToMap(ListTag listTag) {
+        return listTag
+            .stream()
+            .map(tag -> (CompoundTag) tag)
+            .collect(ChunkValueMap::new, ChunkAmountTag::toMap, ChunkValueMap::putAll);
+    }
+
+    private static ListTag serializeToTag(ChunkValueMap map) {
+        return map.entrySet()
+            .stream()
+            .map(ChunkAmountTag::new)
+            .collect(ListTag::new, ListTag::add, ListTag::addAll);
+    }
+
+    /** Helper for serializing and deserializing integer data for a chunk. */
+    private static class ChunkAmountTag extends CompoundTag {
         private static final String X = "x";
         private static final String Z = "z";
         private static final String AMOUNT = "amt";
 
-        /** Serializes a single entry from {@link #humidity} map to a {@link CompoundTag}. */
-        private HumidityTag(Map.Entry<ChunkPos, Integer> entry) {
+        /** Serializes a single entry from a chunk map to a {@link CompoundTag}. */
+        private ChunkAmountTag(Map.Entry<ChunkPos, Integer> entry) {
             this.putInt(X, entry.getKey().x);
             this.putInt(Z, entry.getKey().z);
             this.putInt(AMOUNT, entry.getValue());
         }
 
-        /** Deserializes a {@link CompoundTag} into the given Map, which eventually becomes {@link #humidity}. */
+        /** Deserializes a {@link CompoundTag} into the given Map, which eventually becomes a chunk map. */
         private static void toMap(Map<ChunkPos, Integer> map, CompoundTag tag) {
             map.put(new ChunkPos(
                 tag.getInt(X),

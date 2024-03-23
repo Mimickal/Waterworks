@@ -13,6 +13,7 @@ import mimickal.minecraft.waterworks.eva.commands.HumidityCommand;
 import mimickal.minecraft.waterworks.eva.events.Accumulation;
 import mimickal.minecraft.waterworks.eva.events.Evaporation;
 import mimickal.minecraft.waterworks.eva.events.Rain;
+import mimickal.minecraft.waterworks.eva.events.Statue;
 import mimickal.minecraft.waterworks.tool.Trades;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -39,6 +40,9 @@ public class Waterworks
 
         // Register events
         Stream.of(
+            // Block placement
+            Statue.class,
+
             // Tick
             Accumulation.class,
             Evaporation.class,
