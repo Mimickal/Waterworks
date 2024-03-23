@@ -122,8 +122,10 @@ public class Accumulation {
     /**
      * Returns the percent chance rain should accumulate in the chunk this block is located in.
      * This is determined by the "downfall" value of the biome the block resides in.
+     * Having a {@link mimickal.minecraft.waterworks.ModBlocks#STATUE} in the chunk also slightly increases the chance.
      */
     private static double getAccumulationChance(ServerLevel world, BlockPos pos) {
-        return world.getBiome(pos).value().getDownfall();
+        double chanceMod = EvaData.get(world).getStatueCount(pos) > 0 ? 0.1 : 0;
+        return world.getBiome(pos).value().getDownfall() + chanceMod;
     }
 }

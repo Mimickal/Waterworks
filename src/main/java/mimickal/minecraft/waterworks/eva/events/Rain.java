@@ -98,9 +98,12 @@ public class Rain {
      * <p>
      * Both of these values are measured in milli-buckets, so simple division gives us the desired value.
      * This resulting value can be above 1.0.
+     * <p>
+     * Having a {@link mimickal.minecraft.waterworks.ModBlocks#STATUE} in the chunk also slightly increases humidity.
      */
     private static double calcChunkHumidity(ServerLevel world, BlockPos blockPos) {
-        return (double) EvaData.get(world).getHumidity(blockPos) / Config.rainChunkHumidityThreshold.get();
+        double humidityMod = EvaData.get(world).getStatueCount(blockPos) > 0 ? 0.1 : 0;
+        return (EvaData.get(world).getHumidity(blockPos) + humidityMod) / Config.rainChunkHumidityThreshold.get();
     }
 
     /**
