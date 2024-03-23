@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "A A",
+    "I I",
+    " L "
+  ],
+  "key": {
+    "A": {
+      "item": "waterworks:aquamarine"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "L": {
+      "tag": "minecraft:logs"
+    }
+  },
+  "result": {
+    "item": "waterworks:statue"
+  }
+}
