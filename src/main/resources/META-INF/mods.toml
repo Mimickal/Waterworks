@@ -15,6 +15,6 @@ credits="Mimickal"
 authors="Mimickal"
 displayTest="MATCH_VERSION"
 description='''
-Waterworks is a mod that changes how water behaves in Minecraft.
+Waterworks is a mod that changes how water behaves.
 Water accumulates when it rains and evaporates when the sun shines. Rain becomes a function of relative humidity.
 '''
