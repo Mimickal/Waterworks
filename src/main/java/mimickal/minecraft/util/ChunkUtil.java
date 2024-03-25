@@ -13,8 +13,6 @@ import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -22,26 +20,12 @@ import java.util.stream.IntStream;
 public class ChunkUtil {
     /** For some silly reason {@link ChunkMap#getChunks} is protected, so this is the workaround. */
     public static Iterable<ChunkHolder> getLoadedChunks(ServerLevel world) {
-        // Ironically, Reflection is probably the most portable way to do this.
-        ChunkMap chunkMap = world.getChunkSource().chunkMap;
-        try {
-            Method getChunks = ChunkMap.class.getDeclaredMethod("getChunks");
-            getChunks.setAccessible(true);
-
-            // AFAIK there's no way to do this cast that Java thinks is safe.
-            // ChunkMap.getChunks() only ever returns this type, so it's safe enough.
-            @SuppressWarnings("unchecked")
-            Iterable<ChunkHolder> chunkIterator = (Iterable<ChunkHolder>) getChunks.invoke(chunkMap);
-
-            return chunkIterator;
-        } catch (NoSuchMethodException e) {
-            // This can happen when running locally. I don't know why.
-            // Returning an empty list helps us fail-safe, so no logic that depends on the above assumptions will run.
-            return List.of();
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            // These exceptions being thrown means we messed something up above, so just explode.
-            throw new RuntimeException("Failed to invoke ServerChunkCache.getChunks()", e);
-        }
+        // This method is made public at run-time via an Access Transformer.
+        // See src/resources/META-INF/accesstransformer.cfg
+        //
+        // We could call this function directly everywhere we need it, but wrapping it in a function means
+        // we only need to deal with this incorrect "this method is protected" error in one place.
+        return world.getChunkSource().chunkMap.getChunks();
     }
 
     /**
