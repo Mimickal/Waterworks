@@ -16,7 +16,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 
 var mc_version = '1.18.2'
-version = "${mc_version}-0.0.0-dev"
+version = "${mc_version}-1.0.0-beta"
 group = 'mimickal.minecraft.waterworks'
 archivesBaseName = 'waterworks'
 
