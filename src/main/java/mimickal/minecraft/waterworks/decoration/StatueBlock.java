@@ -40,12 +40,14 @@ public class StatueBlock extends Block {
 
     @Override
     @NotNull
+    @SuppressWarnings("deprecation")
     public BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
     @NotNull
+    @SuppressWarnings("deprecation")
     public BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
@@ -57,6 +59,7 @@ public class StatueBlock extends Block {
 
     @Override
     @NotNull
+    @SuppressWarnings("deprecation")
     public VoxelShape getShape(
         @NotNull BlockState state,
         @NotNull BlockGetter level,
@@ -68,6 +71,7 @@ public class StatueBlock extends Block {
 
     @Override
     @NotNull
+    @SuppressWarnings("deprecation")
     public PushReaction getPistonPushReaction(@NotNull BlockState state) {
         return PushReaction.DESTROY;
     }
