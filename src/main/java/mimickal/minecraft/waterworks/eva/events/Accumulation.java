@@ -72,7 +72,7 @@ public class Accumulation {
             )))
             .map(chunk -> ChunkUtil.getRandomPosInChunk(world, chunk))
             .filter(chunkBlockPos -> world.getBiome(chunkBlockPos).value().getPrecipitation() == Biome.Precipitation.RAIN)
-            .filter(chunkBlockPos -> Chance.percent(getAccumulationChance(world, chunkBlockPos)))
+            .filter(chunkBlockPos -> Chance.decimal(getAccumulationChance(world, chunkBlockPos)))
             .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
             .filter(waterPos -> !onBlacklist(world, waterPos.below()))
             .forEach(waterPos -> accumulateAtPosition(world, waterPos));
@@ -116,7 +116,7 @@ public class Accumulation {
     }
 
     /**
-     * Returns the percent chance rain should accumulate in the chunk this block is located in.
+     * Returns the chance (as a {@link Double} 0.0 - 1.0) rain should accumulate in the chunk this block is located in.
      * This is determined by the "downfall" value of the biome the block resides in.
      * Having a {@link mimickal.minecraft.waterworks.ModBlocks#STATUE} in the chunk also slightly increases the chance.
      */

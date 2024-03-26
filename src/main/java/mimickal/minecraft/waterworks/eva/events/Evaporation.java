@@ -126,7 +126,7 @@ public class Evaporation {
     }
 
     /**
-     * Returns the percent chance water should evaporate in the chunk this block is located in.
+     * Returns the chance (as a {@link Double} 0.0 - 1.0) water should evaporate in the chunk this block is located in.
      * <p>
      * Vanilla biomes types have a `downfall` value that the game uses to determine its rain intensity relative to
      * other biome types. This value seems to loosely correlate with how "dry" a biome should be
