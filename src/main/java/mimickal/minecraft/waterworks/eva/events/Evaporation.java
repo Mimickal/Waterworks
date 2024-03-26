@@ -16,7 +16,7 @@ import mimickal.minecraft.waterworks.eva.EvaData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.DistanceManager;
+import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -28,11 +28,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.StreamSupport;
+import java.util.*;
 
 public class Evaporation {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -59,15 +55,15 @@ public class Evaporation {
         if (!TICK_GUARDS.get(event.world.dimension()).ready()) return;
 
         ServerLevel world = (ServerLevel) event.world;
-        DistanceManager distanceManager = world.getChunkSource().chunkMap.getDistanceManager();
 
-        StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
-            .filter(chunkHolder -> distanceManager.inBlockTickingRange(chunkHolder.getPos().toLong()))
-            .filter(chunkHolder -> Chance.percent(Chance.scaleWithSmoothness(
+        ChunkUtil.streamLoadedChunks(world)
+            .map(ChunkHolder::getTickingChunk)
+            .filter(Objects::nonNull)
+            .filter(chunk -> Chance.percent(Chance.scaleWithSmoothness(
                 Config.evaporationIntensity.get(), Config.evaporationSmoothness.get()
             )))
-            .filter(chunkHolder -> Chance.decimal(timeOfDayScale(world)))
-            .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
+            .filter(chunk -> Chance.decimal(timeOfDayScale(world)))
+            .map(chunk -> ChunkUtil.getRandomPosInChunk(world, chunk))
             .filter(chunkBlockPos -> Chance.percent(getEvaporationChance(world, chunkBlockPos)))
             .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
             .map(BlockPos::below)

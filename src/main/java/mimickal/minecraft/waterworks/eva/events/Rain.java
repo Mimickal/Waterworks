@@ -23,7 +23,6 @@ import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.StreamSupport;
 
 public class Rain {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -72,8 +71,8 @@ public class Rain {
 
         ServerLevel world = (ServerLevel) event.world;
 
-        double avgHumidity = StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
-            .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
+        double avgHumidity = ChunkUtil.streamLoadedChunks(world)
+            .map(chunkHolder -> ChunkUtil.getRandomPosInChunk(world, chunkHolder))
             .mapToDouble(chunkBlockPos -> calcChunkHumidity(world, chunkBlockPos))
             .average()
             .orElse(0);

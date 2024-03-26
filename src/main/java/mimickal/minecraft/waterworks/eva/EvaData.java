@@ -183,7 +183,7 @@ public class EvaData extends SavedData {
      * a random block in the chunk and use that block's biome's downfall value for the calculation.
      */
     private Integer calcInitialHumidity(ChunkPos pos) {
-        BlockPos blockPos = ChunkUtil.getRandomBlockInChunk(this.world, pos);
+        BlockPos blockPos = ChunkUtil.getRandomPosInChunk(this.world, pos);
         return calcInitialHumidity(blockPos);
     }
 

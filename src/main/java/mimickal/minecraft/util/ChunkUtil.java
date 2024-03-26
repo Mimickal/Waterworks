@@ -9,23 +9,23 @@ package mimickal.minecraft.util;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ChunkHolder;
-import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class ChunkUtil {
-    /** For some silly reason {@link ChunkMap#getChunks} is protected, so this is the workaround. */
-    public static Iterable<ChunkHolder> getLoadedChunks(ServerLevel world) {
-        // This method is made public at run-time via an Access Transformer.
+    /** Handles the weirdness needed to stream over all loaded chunks. */
+    public static Stream<ChunkHolder> streamLoadedChunks(ServerLevel world) {
+        // This method is made public via an Access Transformer.
         // See src/resources/META-INF/accesstransformer.cfg
-        //
-        // We could call this function directly everywhere we need it, but wrapping it in a function means
-        // we only need to deal with this incorrect "this method is protected" error in one place.
-        return world.getChunkSource().chunkMap.getChunks();
+        Iterable<ChunkHolder> chunks = world.getChunkSource().chunkMap.getChunks();
+        return StreamSupport.stream(chunks.spliterator(), false);
     }
 
     /**
@@ -36,12 +36,15 @@ public class ChunkUtil {
      * will be roughly equal to the percentage of this chunk contained within that biome.
      * e.g. if 40% of the biome is Jungle, ~40% of the time we'll get a Jungle block.
      */
-    public static BlockPos getRandomBlockInChunk(ServerLevel world, ChunkHolder chunkHolder) {
-        ChunkPos chunkPos = chunkHolder.getPos();
-        return getRandomBlockInChunk(world, chunkPos);
+    public static BlockPos getRandomPosInChunk(ServerLevel world, ChunkHolder chunkHolder) {
+        return getRandomPosInChunk(world, chunkHolder.getPos());
+    }
+
+    public static BlockPos getRandomPosInChunk(ServerLevel world, LevelChunk chunk) {
+        return getRandomPosInChunk(world, chunk.getPos());
     }
     
-    public static BlockPos getRandomBlockInChunk(ServerLevel world, ChunkPos chunkPos) {
+    public static BlockPos getRandomPosInChunk(ServerLevel world, ChunkPos chunkPos) {
         return world.getBlockRandomPos(
             chunkPos.getMinBlockX(), 0 /* Y */, chunkPos.getMinBlockZ(), 15 /* Chunk width */
         );

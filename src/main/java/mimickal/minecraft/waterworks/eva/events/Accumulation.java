@@ -16,7 +16,7 @@ import mimickal.minecraft.waterworks.eva.EvaData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.DistanceManager;
+import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
@@ -28,12 +28,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 public class Accumulation {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -67,14 +63,14 @@ public class Accumulation {
         if (!TICK_GUARDS.get(event.world.dimension()).ready()) return;
 
         ServerLevel world = (ServerLevel) event.world;
-        DistanceManager distanceManager = world.getChunkSource().chunkMap.getDistanceManager();
 
-        StreamSupport.stream(ChunkUtil.getLoadedChunks(world).spliterator(), false)
-            .filter(chunkHolder -> distanceManager.inBlockTickingRange(chunkHolder.getPos().toLong()))
-            .filter(chunkHolder -> Chance.percent(Chance.scaleWithSmoothness(
+        ChunkUtil.streamLoadedChunks(world)
+            .map(ChunkHolder::getTickingChunk)
+            .filter(Objects::nonNull)
+            .filter(chunk -> Chance.percent(Chance.scaleWithSmoothness(
                 Config.accumulationIntensity.get(), Config.accumulationSmoothness.get()
             )))
-            .map(chunkHolder -> ChunkUtil.getRandomBlockInChunk(world, chunkHolder))
+            .map(chunk -> ChunkUtil.getRandomPosInChunk(world, chunk))
             .filter(chunkBlockPos -> world.getBiome(chunkBlockPos).value().getPrecipitation() == Biome.Precipitation.RAIN)
             .filter(chunkBlockPos -> Chance.percent(getAccumulationChance(world, chunkBlockPos)))
             .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
