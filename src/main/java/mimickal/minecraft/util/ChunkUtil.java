@@ -13,8 +13,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -51,21 +50,17 @@ public class ChunkUtil {
     }
 
     /**
-     * Returns a list of chunks in range of the given chunk.
-     * For example, with a range of 1, this function will return the 3x3 grid of {@link ChunkPos}
-     * surrounding the given chunk (total of 9).
-     * With a range of 2, this returns 5x5 {@link ChunkPos} (total of 25).
+     * Gets a horizontal slice of blocks in a chunk.
+     * <p>
+     * This is essentially a cartesian product of the chunk's x and z block ranges.<br/>
+     * {@code range(minX, maxX) x range(minZ, maxZ)}
      */
-    public static List<ChunkPos> getSurroundingChunkPos(ChunkPos pos, int range) {
-        int size = (int)Math.pow(range + 1, 2);
-        List <ChunkPos> surrounding = new ArrayList<>(size);
-
-        for (int x : IntStream.rangeClosed(pos.x - range, pos.x + range).toArray()) {
-            for (int z : IntStream.rangeClosed(pos.z - range, pos.z + range).toArray()) {
-                surrounding.add(new ChunkPos(x, z));
-            }
-        }
-
-        return surrounding;
+    public static Stream<BlockPos> blocksInChunkArea(LevelChunk chunk) {
+        ChunkPos pos = chunk.getPos();
+        return IntStream.rangeClosed(pos.getMinBlockX(), pos.getMaxBlockX()).mapToObj(x -> (
+            IntStream.rangeClosed(pos.getMinBlockZ(), pos.getMaxBlockZ()).mapToObj(z -> (
+                new BlockPos(x, 0, z)
+            ))
+        )).flatMap(Function.identity());
     }
 }

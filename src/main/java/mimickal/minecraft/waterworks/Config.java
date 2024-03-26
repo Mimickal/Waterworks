@@ -32,7 +32,6 @@ public class Config {
     public static ForgeConfigSpec.BooleanValue evaporationEnabled;
     public static ForgeConfigSpec.DoubleValue evaporationIntensity;
     public static ForgeConfigSpec.DoubleValue evaporationSmoothness;
-    public static ForgeConfigSpec.IntValue evaporationTenacity;
     public static ForgeConfigSpec.ConfigValue<Integer> evaporationMaxHeight;
     public static ForgeConfigSpec.DoubleValue evaporationSunCoefficient;
     public static ForgeConfigSpec.BooleanValue chunkVanillaHumidity;
@@ -145,13 +144,6 @@ public class Config {
                 "Higher smoothness means less time between evaporation cycles."
             )
             .defineInRange("smoothness_percent", 20d, 0d, 100d);
-
-        evaporationTenacity = builder
-            .comment(
-                "Tenacity controls how many flowing water blocks we'll search to find a source block.",
-                "Higher values mean evaporation will succeed more often, but are harder on the CPU."
-            )
-            .defineInRange("tenacity", 30, 0, Integer.MAX_VALUE);
 
         evaporationMaxHeight = builder
             .comment(

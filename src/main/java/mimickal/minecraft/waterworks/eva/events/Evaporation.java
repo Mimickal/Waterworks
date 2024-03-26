@@ -10,19 +10,18 @@ package mimickal.minecraft.waterworks.eva.events;
 import com.mojang.logging.LogUtils;
 import mimickal.minecraft.util.Chance;
 import mimickal.minecraft.util.ChunkUtil;
+import mimickal.minecraft.util.ListUtil;
 import mimickal.minecraft.util.TickGuard;
 import mimickal.minecraft.waterworks.Config;
 import mimickal.minecraft.waterworks.eva.EvaData;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
@@ -63,11 +62,28 @@ public class Evaporation {
                 Config.evaporationIntensity.get(), Config.evaporationSmoothness.get()
             )))
             .filter(chunk -> Chance.decimal(timeOfDayScale(world)))
-            .map(chunk -> ChunkUtil.getRandomPosInChunk(world, chunk))
-            .filter(chunkBlockPos -> Chance.percent(getEvaporationChance(world, chunkBlockPos)))
-            .map(chunkBlockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunkBlockPos))
+            .map(chunk -> findSourceInChunk(world, chunk))
+            .filter(Objects::nonNull)
+            .filter(chunkBlockPos -> Chance.decimal(getEvaporationChance(world, chunkBlockPos)))
+            .forEach(waterPos -> evaporateAtPosition(world, waterPos));
+    }
+
+    /**
+     * Searches the surface of the given chunk for a water source block.
+     * <p>
+     * This returns {@code null} if no source is found.
+     */
+    @Nullable
+    private static BlockPos findSourceInChunk(ServerLevel world, LevelChunk chunk) {
+        return ChunkUtil.blocksInChunkArea(chunk)
+            .collect(ListUtil.toShuffledList()) // Shuffle so we don't drill straight down in large bodies of water
+            .stream()
+            .map(blockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, blockPos))
             .map(BlockPos::below)
-            .forEach(maybeWaterPos -> evaporateAtPosition(world, maybeWaterPos));
+            .filter(blockPos -> world.getFluidState(blockPos).isSource())
+            .filter(blockPos -> world.getBlockState(blockPos).is(Blocks.WATER))
+            .findFirst()
+            .orElse(null);
     }
 
     /**
@@ -76,79 +92,9 @@ public class Evaporation {
      * This method handles evaporating partial water blocks, if using a water physics mod that supports it.
      */
     private static void evaporateAtPosition(ServerLevel world, BlockPos pos) {
-        BlockPos evapPos = null;
-
-        if (world.getFluidState(pos).getType() == Fluids.WATER) {
-            evapPos = pos;
-        }
-
-        if (world.getFluidState(pos).getType() == Fluids.FLOWING_WATER) {
-            evapPos = findNearestSource(world, pos);
-        }
-
-        if (evapPos != null) {
-            LOGGER.debug("Evaporating at {}" + (evapPos.equals(pos) ? "" : " (searched from {})"), evapPos, pos);
-            world.setBlockAndUpdate(evapPos, Blocks.AIR.defaultBlockState());
-            EvaData.get(world).changeHumidity(evapPos, 1000);
-        }
-    }
-
-    /**
-     * Given a {@link BlockPos} containing flowing fluid, searches for the location of the nearest source of that fluid.
-     * <p>
-     * This can return `null` if the starting position isn't a fluid, or we can't find a source within the step limit.
-     */
-    @Nullable
-    private static BlockPos findNearestSource(ServerLevel world, BlockPos pos) {
-        // Starting block wasn't water. This is going nowhere fast, so bail out early.
-        if (world.getFluidState(pos).isEmpty()) {
-            return null;
-        }
-
-        int maxSteps = Config.evaporationTenacity.get();
-        int step = 0;
-        BlockPos curPos = pos;
-        BlockPos lastKnownGoodPos = pos;
-
-        // This algorithm assumes that water always flows away from its source.
-        // We follow the flow "backwards" until we find a source.
-        // We also maintain one position of history so that if we make a wrong move, we can go back and try again.
-        while (step < maxSteps && !world.getFluidState(curPos).isSource()) {
-            Vec3 flow = world.getFluidState(curPos).getFlow(world, curPos);
-
-            if (Vec3.ZERO.equals(flow)) {
-                // TODO this is better than it was before, but still frequently hits the max step count.
-
-                // We either have water that isn't moving, or a block that isn't water.
-                if (world.getFluidState(curPos).getAmount() > 0) {
-                    // We're in still, non-source water. There should be something useful adjacent to us.
-                    if (DirHelper.hasNext()) {
-                        curPos = curPos.relative(DirHelper.next());
-                    } else {
-                        LOGGER.debug("Lost the water at {} while searching", curPos);
-                        break;
-                    }
-                } else {
-                    // We're not in water at all
-                    curPos = lastKnownGoodPos;
-                }
-            } else {
-                // Continue searching in the opposite direction of the flow.
-                DirHelper.reset();
-                lastKnownGoodPos = curPos;
-                curPos = new BlockPos(
-                    curPos.getX() + (flow.x == 0 ? 0 : (flow.x < 0 ? 1 : -1)),
-                    curPos.getY() + (flow.y == 0 ? 0 : (flow.y < 0 ? 1 : -1)),
-                    curPos.getZ() + (flow.z == 0 ? 0 : (flow.z < 0 ? 1 : -1))
-                );
-            }
-
-            step++;
-        }
-
-        LOGGER.debug("Searched for {} in {} steps", curPos, step);
-
-        return world.getFluidState(curPos).isSource() ? curPos : null;
+        LOGGER.debug("Evaporating at {}", pos);
+        world.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        EvaData.get(world).changeHumidity(pos, 1000);
     }
 
     /**
@@ -189,37 +135,5 @@ public class Evaporation {
      */
     private static double getEvaporationChance(ServerLevel world, BlockPos pos) {
         return 1 - world.getBiome(pos).value().getDownfall();
-    }
-
-    /** Helps us find the next direction to search when following water flow doesn't work. */
-    private static class DirHelper {
-        private static final List<Direction> directions = Arrays.asList(
-            Direction.UP,
-            Direction.NORTH,
-            Direction.EAST,
-            Direction.SOUTH,
-            Direction.WEST
-        );
-
-        private static int curIndex;
-
-        private static void reset() {
-            curIndex = 0;
-        }
-
-        private static boolean hasNext() {
-            return curIndex < directions.size();
-        }
-
-        @Nullable
-        private static Direction next() {
-            if (!hasNext()) {
-                return null;
-            }
-
-            Direction nextDir = directions.get(curIndex);
-            curIndex++;
-            return nextDir;
-        }
     }
 }
