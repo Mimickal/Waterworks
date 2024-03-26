@@ -10,10 +10,7 @@ package mimickal.minecraft.waterworks;
 import com.mojang.logging.LogUtils;
 import mimickal.minecraft.waterworks.decoration.Painting;
 import mimickal.minecraft.waterworks.eva.commands.HumidityCommand;
-import mimickal.minecraft.waterworks.eva.events.Accumulation;
-import mimickal.minecraft.waterworks.eva.events.Evaporation;
-import mimickal.minecraft.waterworks.eva.events.Rain;
-import mimickal.minecraft.waterworks.eva.events.Statue;
+import mimickal.minecraft.waterworks.eva.events.*;
 import mimickal.minecraft.waterworks.tool.Trades;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -45,6 +42,7 @@ public class Waterworks
 
             // Tick
             Accumulation.class,
+            Bucket.class,
             Evaporation.class,
             Rain.class,
 

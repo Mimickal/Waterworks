@@ -18,7 +18,7 @@ public abstract class TickGuard {
         this.counter = 0;
     }
 
-    public abstract void updateDelay();
+    public void updateDelay() {}
 
     public final boolean ready() {
         if (this.counter < this.delay) {
@@ -48,6 +48,13 @@ public abstract class TickGuard {
         @Override
         public void updateDelay() {
             this.delay = (int)((100 - this.smoothness.get()) / 100 * MAX_TICK_DELAY);
+        }
+    }
+
+    /** A {@link TickGuard} that has a constant delay time. */
+    public static class Constant extends TickGuard {
+        public Constant(int delay) {
+            this.delay = delay;
         }
     }
 
