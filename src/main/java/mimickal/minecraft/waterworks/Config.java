@@ -80,9 +80,11 @@ public class Config {
         accumulationIntensity = builder
             .comment(
                 "Intensity controls how much water accumulates at a time.",
-                "Higher intensity means more loaded chunks are checked per-cycle."
+                "Higher intensity means more loaded chunks are checked per-cycle.",
+                "NOTE: Minecraft potentially has hundreds of chunks loaded at once,",
+                "so small percentages still produce large results."
             )
-            .defineInRange("intensity_percent", 10d, 0d, 100d);
+            .defineInRange("intensity_percent", 2d, 0d, 100d);
 
         accumulationSmoothness = builder
             .comment(
@@ -134,9 +136,11 @@ public class Config {
         evaporationIntensity = builder
             .comment(
                 "Intensity controls how much water evaporates at a time.",
-                "Higher intensity means more loaded chunks are checked per-cycle."
+                "Higher intensity means more loaded chunks are checked per-cycle.",
+                "NOTE: Minecraft potentially has hundreds of chunks loaded at once,",
+                "so small percentages still produce large results."
             )
-            .defineInRange("intensity_percent", 10d, 0d, 100d);
+            .defineInRange("intensity_percent", 2d, 0d, 100d);
 
         evaporationSmoothness = builder
             .comment(
