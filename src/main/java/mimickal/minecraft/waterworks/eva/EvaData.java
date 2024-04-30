@@ -57,6 +57,7 @@ public class EvaData extends SavedData {
     // TODO This could get prohibitively large if a world gets big enough.
     /** A measure of water currently "evaporated" per-chunk. */
     private final ChunkValueMap humidity;
+    /** A count of leviathan statues places per-chunk. This cache avoids needing to search the whole chunk. */
     private final ChunkValueMap statues;
     private final ServerLevel world;
 
@@ -187,7 +188,17 @@ public class EvaData extends SavedData {
         return calcInitialHumidity(blockPos);
     }
 
-    /** Calculates the initial humidity for the chunk the given block pos resides in. */
+    /**
+     * Calculates the initial humidity for the chunk the given block pos resides in.
+     * <p>
+     * Initial humidity is a percentage of the configured "100% will rain" threshold,
+     * optionally scaled by the {@link net.minecraft.world.level.biome.Biome#getDownfall()}
+     * value of the biome this block lives in.
+     * <p>
+     * This allows biomes that should intuitively be humid to generate humid (e.g. the ocean).
+     * This avoids a large delay before the first rainstorm in a new world, whereas starting at 0 humidity would
+     * require a lot of evaporation to happen before rain would happen.
+     */
     private Integer calcInitialHumidity(BlockPos pos) {
         int humidity = (int)(
             Config.chunkDefaultHumidityPercent.get() / 100 *
