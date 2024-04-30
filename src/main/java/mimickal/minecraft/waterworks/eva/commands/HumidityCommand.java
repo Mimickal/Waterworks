@@ -104,8 +104,8 @@ public class HumidityCommand {
 
     /** Prints the humidity at the given chunk. */
     private static int getHumidityAtPos(CommandContext<CommandSourceStack> context, ChunkPos pos) {
-        ServerLevel world = context.getSource().getLevel();
-        int humidity = EvaData.get(world).getHumidity(pos);
+        ServerLevel level = context.getSource().getLevel();
+        int humidity = EvaData.get(level).getHumidity(pos);
         sendMsg(context, "Humidity at", pos, ":", humidity, "mB");
         return humidity;
     }
@@ -117,10 +117,10 @@ public class HumidityCommand {
 
     /** Sets the humidity at the given chunk. */
     private static int setHumidityAtPos(CommandContext<CommandSourceStack> context, ChunkPos pos) {
-        ServerLevel world = context.getSource().getLevel();
+        ServerLevel level = context.getSource().getLevel();
         int newAmount = IntegerArgumentType.getInteger(context, ARG_AMT);
-        int oldAmount = EvaData.get(world).getHumidity(pos);
-        EvaData.get(world).setHumidity(pos, newAmount);
+        int oldAmount = EvaData.get(level).getHumidity(pos);
+        EvaData.get(level).setHumidity(pos, newAmount);
 
         sendMsg(context, "Setting humidity at", pos, ":", oldAmount, "mB", "->", newAmount, "mB");
         return newAmount;
@@ -133,9 +133,9 @@ public class HumidityCommand {
 
     /** Resets the humidity to default at the given chunk. */
     private static int resetHumidityAtPos(CommandContext<CommandSourceStack> context, ChunkPos pos) {
-        ServerLevel world = context.getSource().getLevel();
-        EvaData.get(world).resetHumidity(pos);
-        int newAmount = EvaData.get(world).getHumidity(pos);
+        ServerLevel level = context.getSource().getLevel();
+        EvaData.get(level).resetHumidity(pos);
+        int newAmount = EvaData.get(level).getHumidity(pos);
 
         sendMsg(context, "Resetting humidity at", pos, ":", newAmount, "mB");
         return 0; // Doesn't correspond to anything, but also doesn't matter...?

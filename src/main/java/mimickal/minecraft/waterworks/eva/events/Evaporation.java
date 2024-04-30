@@ -53,19 +53,19 @@ public class Evaporation {
         TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard.Config(Config.evaporationSmoothness));
         if (!TICK_GUARDS.get(event.world.dimension()).ready()) return;
 
-        ServerLevel world = (ServerLevel) event.world;
+        ServerLevel level = (ServerLevel) event.world;
 
-        ChunkUtil.streamLoadedChunks(world)
+        ChunkUtil.streamLoadedChunks(level)
             .map(ChunkHolder::getTickingChunk)
             .filter(Objects::nonNull)
             .filter(chunk -> Chance.percent(Chance.scaleWithSmoothness(
                 Config.evaporationIntensity.get(), Config.evaporationSmoothness.get()
             )))
-            .filter(chunk -> Chance.decimal(timeOfDayScale(world)))
-            .map(chunk -> findSourceInChunk(world, chunk))
+            .filter(chunk -> Chance.decimal(timeOfDayScale(level)))
+            .map(chunk -> findSourceInChunk(level, chunk))
             .filter(Objects::nonNull)
-            .filter(chunkBlockPos -> Chance.decimal(getEvaporationChance(world, chunkBlockPos)))
-            .forEach(waterPos -> evaporateAtPosition(world, waterPos));
+            .filter(chunkBlockPos -> Chance.decimal(getEvaporationChance(level, chunkBlockPos)))
+            .forEach(waterPos -> evaporateAtPosition(level, waterPos));
     }
 
     /**
@@ -74,34 +74,34 @@ public class Evaporation {
      * This returns {@code null} if no source is found.
      */
     @Nullable
-    private static BlockPos findSourceInChunk(ServerLevel world, LevelChunk chunk) {
+    private static BlockPos findSourceInChunk(ServerLevel level, LevelChunk chunk) {
         return ChunkUtil.blocksInChunkArea(chunk)
             .collect(ListUtil.toShuffledList()) // Shuffle so we don't drill straight down in large bodies of water
             .stream()
-            .map(blockPos -> world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, blockPos))
+            .map(blockPos -> level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, blockPos))
             .map(BlockPos::below)
-            .filter(blockPos -> world.getFluidState(blockPos).isSource())
-            .filter(blockPos -> world.getBlockState(blockPos).is(Blocks.WATER))
+            .filter(blockPos -> level.getFluidState(blockPos).isSource())
+            .filter(blockPos -> level.getBlockState(blockPos).is(Blocks.WATER))
             .findFirst()
             .orElse(null);
     }
 
     /**
-     * Evaporate water at the given position (and track it in world data).
+     * Evaporate water at the given position (and track it in level data).
      * <p>
      * This method handles evaporating partial water blocks, if using a water physics mod that supports it.
      */
-    private static void evaporateAtPosition(ServerLevel world, BlockPos pos) {
+    private static void evaporateAtPosition(ServerLevel level, BlockPos pos) {
         LOGGER.debug("Evaporating at {}", pos);
-        world.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
-        EvaData.get(world).changeHumidity(pos, 1000);
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        EvaData.get(level).changeHumidity(pos, 1000);
     }
 
     /**
      * Returns a scalar that is at its max when the sun is highest, and minimum when the sun disappears.
      * It remains at that minimum throughout the night.
      */
-    private static double timeOfDayScale(ServerLevel world) {
+    private static double timeOfDayScale(ServerLevel level) {
         // One hour = 1000 "units". 0 is 6AM, 1000 is 7AM, 6000 is "noon", 18000 is "midnight" etc...
         // These are the same units used in the "/time set X" command.
         // This number continues counting up the next day, so 24000 is 6AM the next day.
@@ -110,7 +110,7 @@ public class Evaporation {
         // The sun disappears under the horizon at 7PM (13000), also mapped to keyword "night".
 
         double min = 1 - Config.evaporationSunCoefficient.get();
-        long tod = world.getLevelData().getDayTime();
+        long tod = level.getLevelData().getDayTime();
         tod += 1000;  // Shift so sun appearance is 0 instead of 23000. This just makes the math easier.
         tod %= 24000; // Always deal with the 0 - 24000 range.
 
@@ -133,7 +133,7 @@ public class Evaporation {
      * (e.g. deserts have a low `downfall` value).
      * We factor this into the evaporation chance calculation so dryer biomes evaporate more frequently.
      */
-    private static double getEvaporationChance(ServerLevel world, BlockPos pos) {
-        return 1 - world.getBiome(pos).value().getDownfall();
+    private static double getEvaporationChance(ServerLevel level, BlockPos pos) {
+        return 1 - level.getBiome(pos).value().getDownfall();
     }
 }

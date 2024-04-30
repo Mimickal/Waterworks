@@ -48,14 +48,14 @@ public class Bucket {
         TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard.Constant(CHECK_DELAY));
         if (!TICK_GUARDS.get(event.world.dimension()).ready()) return;
 
-        ServerLevel world = (ServerLevel) event.world;
+        ServerLevel level = (ServerLevel) event.world;
 
-        world.players()
+        level.players()
             .stream()
             .filter(Entity::isInRain) // Access Transformed to be public
             .filter(player -> player.isHolding(item -> ItemStack.matches(item, SINGLE_BUCKET)))
-            .filter(player -> Chance.decimal(getBucketFillChance(world, player.getOnPos())))
-            .forEach(player -> replacePlayerHeldBucketWithWaterBucket(world, player));
+            .filter(player -> Chance.decimal(getBucketFillChance(level, player.getOnPos())))
+            .forEach(player -> replacePlayerHeldBucketWithWaterBucket(level, player));
     }
 
     /**
@@ -63,16 +63,16 @@ public class Bucket {
      * This is determined by the "downfall" value of the biome the player is standing in.
      * Having a {@link mimickal.minecraft.waterworks.ModBlocks#STATUE} in the chunk also slightly increases the chance.
      */
-    private static double getBucketFillChance(ServerLevel world, BlockPos pos) {
-        double chanceMod = EvaData.get(world).getStatueCount(pos) > 0 ? 0.1 : 0;
-        return world.getBiome(pos).value().getDownfall() + chanceMod;
+    private static double getBucketFillChance(ServerLevel level, BlockPos pos) {
+        double chanceMod = EvaData.get(level).getStatueCount(pos) > 0 ? 0.1 : 0;
+        return level.getBiome(pos).value().getDownfall() + chanceMod;
     }
 
     /**
      * If a player is holding a bucket, fill the bucket with water.<br>
      * Only does one hand at a time so players double-fisting buckets get a more natural feeling effect.
      */
-    private static void replacePlayerHeldBucketWithWaterBucket(ServerLevel world, ServerPlayer player) {
+    private static void replacePlayerHeldBucketWithWaterBucket(ServerLevel level, ServerPlayer player) {
         if (ItemStack.matches(player.getItemInHand(InteractionHand.MAIN_HAND), SINGLE_BUCKET)) {
             player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
         } else if (ItemStack.matches(player.getItemInHand(InteractionHand.OFF_HAND), SINGLE_BUCKET)) {
@@ -80,6 +80,6 @@ public class Bucket {
         }
 
         LOGGER.debug("Giving water bucket to {}", player);
-        EvaData.get(world).changeHumidity(player.getOnPos(), -1000);
+        EvaData.get(level).changeHumidity(player.getOnPos(), -1000);
     }
 }

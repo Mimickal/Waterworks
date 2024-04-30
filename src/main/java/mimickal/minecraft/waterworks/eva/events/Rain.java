@@ -69,24 +69,24 @@ public class Rain {
         TICK_GUARDS.putIfAbsent(event.world.dimension(), new TickGuard.Random(RAIN_DELAY_MIN, RAIN_DELAY_MAX));
         if (!TICK_GUARDS.get(event.world.dimension()).ready()) return;
 
-        ServerLevel world = (ServerLevel) event.world;
+        ServerLevel level = (ServerLevel) event.world;
 
-        double avgHumidity = ChunkUtil.streamLoadedChunks(world)
-            .map(chunkHolder -> ChunkUtil.getRandomPosInChunk(world, chunkHolder))
-            .mapToDouble(chunkBlockPos -> calcChunkHumidity(world, chunkBlockPos))
+        double avgHumidity = ChunkUtil.streamLoadedChunks(level)
+            .map(chunkHolder -> ChunkUtil.getRandomPosInChunk(level, chunkHolder))
+            .mapToDouble(chunkBlockPos -> calcChunkHumidity(level, chunkBlockPos))
             .average()
             .orElse(0);
 
-        LOGGER.debug("Rain check in {} (humidity: {})", name(world), avgHumidity);
+        LOGGER.debug("Rain check in {} (humidity: {})", name(level), avgHumidity);
 
-        if (world.isRaining()) {
+        if (level.isRaining()) {
             // Subtracting from 1 here "mirrors" the probability on the Y-axis
             if (Chance.decimal(rainChanceFromHumidity(1 - avgHumidity))) {
-                stopRaining(world);
+                stopRaining(level);
             }
         } else {
             if (Chance.decimal(rainChanceFromHumidity(avgHumidity))) {
-                startRaining(world);
+                startRaining(level);
             }
         }
     }
@@ -100,9 +100,9 @@ public class Rain {
      * <p>
      * Having a {@link mimickal.minecraft.waterworks.ModBlocks#STATUE} in the chunk also slightly increases humidity.
      */
-    private static double calcChunkHumidity(ServerLevel world, BlockPos blockPos) {
-        double humidityMod = EvaData.get(world).getStatueCount(blockPos) > 0 ? 0.1 : 0;
-        return (EvaData.get(world).getHumidity(blockPos) + humidityMod) / Config.rainChunkHumidityThreshold.get();
+    private static double calcChunkHumidity(ServerLevel level, BlockPos blockPos) {
+        double humidityMod = EvaData.get(level).getStatueCount(blockPos) > 0 ? 0.1 : 0;
+        return (EvaData.get(level).getHumidity(blockPos) + humidityMod) / Config.rainChunkHumidityThreshold.get();
     }
 
     /**
@@ -118,10 +118,10 @@ public class Rain {
         return Math.pow(humidity, RAIN_CHANCE_EXPONENT);
     }
 
-    /** Start raining indefinitely in the given world. */
-    private static void startRaining(ServerLevel world) {
-        LOGGER.debug("Rain start in {}", name(world));
-        world.setWeatherParameters(
+    /** Start raining indefinitely in the given level. */
+    private static void startRaining(ServerLevel level) {
+        LOGGER.debug("Rain start in {}", name(level));
+        level.setWeatherParameters(
             0 /* Clear time */,
             Integer.MAX_VALUE/* Rain and thunder time */,
             true /* Set is raining */,
@@ -130,14 +130,14 @@ public class Rain {
         );
     }
 
-    /** Stop raining in the given world. */
-    private static void stopRaining(ServerLevel world) {
-        LOGGER.debug("Rain stop in {}", name(world));
-        world.setWeatherParameters(0, 0, false, false);
+    /** Stop raining in the given level. */
+    private static void stopRaining(ServerLevel level) {
+        LOGGER.debug("Rain stop in {}", name(level));
+        level.setWeatherParameters(0, 0, false, false);
     }
 
     /** Convert a {@link ServerLevel} to a log-friendly name. */
-    private static String name(ServerLevel world) {
-        return world.dimension().location().toString();
+    private static String name(ServerLevel level) {
+        return level.dimension().location().toString();
     }
 }

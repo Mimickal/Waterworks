@@ -59,11 +59,12 @@ public class EvaData extends SavedData {
     private final ChunkValueMap humidity;
     /** A count of leviathan statues places per-chunk. This cache avoids needing to search the whole chunk. */
     private final ChunkValueMap statues;
-    private final ServerLevel world;
+    /** The level (aka dimension) this data exists in. */
+    private final ServerLevel level;
 
     /** This constructor is called when loading the first time (i.e. no data on disk). */
-    private EvaData(ServerLevel world) {
-        this.world = world;
+    private EvaData(ServerLevel level) {
+        this.level = level;
         humidity = new ChunkValueMap();
         statues = new ChunkValueMap();
     }
@@ -72,8 +73,8 @@ public class EvaData extends SavedData {
      * This constructor is called when deserializing from disk.
      * @param topLevelTag the incoming serialized data from disk.
      */
-    private EvaData(ServerLevel world, CompoundTag topLevelTag) {
-        this.world = world;
+    private EvaData(ServerLevel level, CompoundTag topLevelTag) {
+        this.level = level;
         this.humidity = deserializeToMap(topLevelTag.getList(HUMIDITY_TAG_NAME, Tag.TAG_COMPOUND));
         this.statues = deserializeToMap(topLevelTag.getList(STATUE_TAG_NAME, Tag.TAG_COMPOUND));
         LOGGER.debug("Loaded humidity data ({} chunks)", this.humidity.size());
@@ -172,7 +173,7 @@ public class EvaData extends SavedData {
     public void resetAllHumidity(boolean seriously) {
         // Like with reset, every chunk's default value will be regenerated next time they're accessed.
         if (!seriously) return;
-        LOGGER.debug("CLEARING humidity map for {}", this.world.dimension().location());
+        LOGGER.debug("CLEARING humidity map for {}", this.level.dimension().location());
         this.humidity.clear();
         this.setDirty();
     }
@@ -184,7 +185,7 @@ public class EvaData extends SavedData {
      * a random block in the chunk and use that block's biome's downfall value for the calculation.
      */
     private Integer calcInitialHumidity(ChunkPos pos) {
-        BlockPos blockPos = ChunkUtil.getRandomPosInChunk(this.world, pos);
+        BlockPos blockPos = ChunkUtil.getRandomPosInChunk(this.level, pos);
         return calcInitialHumidity(blockPos);
     }
 
@@ -204,7 +205,7 @@ public class EvaData extends SavedData {
             Config.chunkDefaultHumidityPercent.get() / 100 *
             Config.rainChunkHumidityThreshold.get() *
             (Config.chunkVanillaHumidity.get()
-                ? this.world.getBiome(pos).value().getDownfall()
+                ? this.level.getBiome(pos).value().getDownfall()
                 : 1
             )
         );
