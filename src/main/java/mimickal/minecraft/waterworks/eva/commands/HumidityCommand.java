@@ -143,8 +143,9 @@ public class HumidityCommand {
 
     /** Resets <i>the entire</i> humidity map to default (actually it just deletes the map). */
     private static int resetHumidityAll(CommandContext<CommandSourceStack> context) {
-        ServerLevel world = context.getSource().getLevel();
-        EvaData.get(world).resetAllHumidity(true);
+        context.getSource().getServer().forgeGetWorldMap().values().forEach(
+            level -> EvaData.get(level).resetAllHumidity(true)
+        );
         sendMsg(context, "Resetting ALL humidity");
         return 0; // Still doesn't correspond to anything.
     }

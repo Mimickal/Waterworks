@@ -167,7 +167,7 @@ public class EvaData extends SavedData {
         resetHumidity(new ChunkPos(pos));
     }
 
-    /** <b>COMPLETELY DELETES</b> the map of evaporated water stored for this world. */
+    /** <b>COMPLETELY DELETES</b> the map of evaporated water stored for this level (NOTE: <i>level</i>, not world). */
     public void resetAllHumidity(boolean seriously) {
         // Like with reset, every chunk's default value will be regenerated next time they're accessed.
         if (!seriously) return;
